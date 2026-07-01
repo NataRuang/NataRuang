@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="id" class="">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Status Pesanan — NataRuang</title>
+  <link rel="icon" href="/icons/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/styles/main.css">
+</head>
+<body class="bg-charcoal-50 dark:bg-charcoal-950 text-charcoal-900 dark:text-charcoal-100 font-sans antialiased">
+
+  <!-- Navbar minimal -->
+  <header class="sticky top-0 z-40 bg-white/95 dark:bg-charcoal-950/95 backdrop-blur-md border-b border-charcoal-100 dark:border-charcoal-800">
+    <div class="max-w-2xl mx-auto px-4 h-14 flex items-center gap-4">
+      <a href="/" class="font-serif text-lg font-semibold">
+        <span class="text-wood-600">Nata</span><span class="dark:text-white">Ruang</span>
+      </a>
+      <span class="text-charcoal-300 dark:text-charcoal-600">/</span>
+      <span class="text-sm text-charcoal-500">Status Pesanan</span>
+    </div>
+  </header>
+
+  <main class="max-w-2xl mx-auto px-4 py-8">
+
+    <!-- Form pencarian -->
+    <div class="bg-white dark:bg-charcoal-900 rounded-2xl p-6 shadow-card mb-6">
+      <h1 class="font-semibold mb-4">Cek Status Pesanan</h1>
+      <div class="flex gap-2">
+        <input id="input-invoice" type="text" placeholder="Nomor invoice (INV-...)"
+          class="input-field flex-1" maxlength="25">
+        <button id="btn-cari" class="btn-primary px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap">Cari</button>
+      </div>
+    </div>
+
+    <!-- Loading skeleton -->
+    <div id="skeleton" class="hidden space-y-4">
+      <div class="animate-skeleton bg-white dark:bg-charcoal-800 rounded-2xl h-40"></div>
+      <div class="animate-skeleton bg-white dark:bg-charcoal-800 rounded-2xl h-24"></div>
+    </div>
+
+    <!-- Hasil pesanan -->
+    <div id="order-result" class="space-y-5"></div>
+
+  </main>
+
+  <script type="module" src="/src/pages/status.js"></script>
+</body>
+</html>

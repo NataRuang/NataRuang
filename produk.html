@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="id" class="">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Katalog furniture NataRuang — sofa, meja, lemari, kursi, dan lainnya. Kualitas premium, harga terjangkau, khusus melayani Malang Raya.">
+  <meta name="robots" content="index, follow">
+
+  <!-- Open Graph -->
+  <meta property="og:type"        content="website">
+  <meta property="og:title"       content="Katalog Produk — NataRuang">
+  <meta property="og:description" content="Jelajahi koleksi furniture premium NataRuang. Cari, filter, dan pesan langsung.">
+  <meta property="og:image"       content="/images/og-image.jpg">
+  <meta property="og:url"         content="https://nataruang.vercel.app/produk.html">
+
+  <title>Katalog Produk — NataRuang</title>
+  <link rel="icon" href="/icons/favicon.ico">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/src/styles/main.css">
+</head>
+
+<body class="bg-charcoal-50 dark:bg-charcoal-950 text-charcoal-900 dark:text-charcoal-100 font-sans antialiased">
+
+  <!-- ═══════════════ NAVBAR ═══════════════ -->
+  <header id="navbar" class="sticky top-0 inset-x-0 z-50 bg-white/95 dark:bg-charcoal-950/95 backdrop-blur-md border-b border-charcoal-100 dark:border-charcoal-800 transition-all duration-300">
+    <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2 font-serif text-xl font-semibold">
+        <span class="text-wood-600">Nata</span><span class="text-charcoal-900 dark:text-white">Ruang</span>
+      </a>
+
+      <ul class="hidden md:flex items-center gap-6 text-sm font-medium">
+        <li><a href="/#beranda" class="nav-link">Beranda</a></li>
+        <li><a href="/produk.html" class="nav-link text-wood-600 dark:text-wood-400">Produk</a></li>
+        <li><a href="/#tentang" class="nav-link">Tentang</a></li>
+        <li><a href="/#kontak" class="nav-link">Kontak</a></li>
+      </ul>
+
+      <div class="flex items-center gap-3">
+        <button id="btn-darkmode" aria-label="Toggle dark mode"
+          class="p-2 rounded-lg hover:bg-charcoal-100 dark:hover:bg-charcoal-800 transition">
+          <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <svg class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+          </svg>
+        </button>
+
+        <a href="#" id="btn-cart" aria-label="Keranjang belanja"
+          class="relative p-2 rounded-lg hover:bg-charcoal-100 dark:hover:bg-charcoal-800 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
+          <span id="cart-badge"
+            class="absolute -top-0.5 -right-0.5 w-4 h-4 text-[10px] font-bold bg-wood-500 text-white rounded-full flex items-center justify-center hidden">0</span>
+        </a>
+
+        <button id="btn-menu" class="md:hidden p-2 rounded-lg hover:bg-charcoal-100 dark:hover:bg-charcoal-800" aria-label="Buka menu">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+      </div>
+    </nav>
+
+    <div id="mobile-menu" class="hidden md:hidden bg-white dark:bg-charcoal-950 border-t border-charcoal-100 dark:border-charcoal-800">
+      <ul class="px-4 py-3 space-y-1 text-sm font-medium">
+        <li><a href="/#beranda" class="block py-2 nav-link">Beranda</a></li>
+        <li><a href="/produk.html" class="block py-2 nav-link text-wood-600">Produk</a></li>
+        <li><a href="/#tentang" class="block py-2 nav-link">Tentang</a></li>
+        <li><a href="/#kontak" class="block py-2 nav-link">Kontak</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <main>
+    <!-- ═══════════════ HERO BANNER KATALOG ═══════════════ -->
+    <section class="relative overflow-hidden bg-charcoal-950">
+      <div class="absolute inset-0 bg-gradient-to-br from-wood-900/40 via-charcoal-950 to-charcoal-900"></div>
+      <div class="absolute -top-24 -right-24 w-96 h-96 bg-wood-600/20 rounded-full blur-3xl"></div>
+      <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-wood-800/20 rounded-full blur-3xl"></div>
+
+      <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 text-center">
+        <p class="text-wood-400 text-sm font-medium uppercase tracking-widest mb-3">Katalog Lengkap</p>
+        <h1 class="font-serif text-3xl md:text-5xl font-semibold text-white leading-tight mb-4">
+          Temukan Furniture Idaman Anda
+        </h1>
+        <p class="text-charcoal-300 max-w-xl mx-auto mb-8">
+          Ratusan pilihan sofa, meja, lemari, dan kursi berkualitas — siap kirim ke Kota Malang, Kab. Malang, dan Kota Batu.
+        </p>
+
+        <!-- ═══ SEARCH PRODUK ═══ -->
+        <div class="max-w-xl mx-auto relative">
+          <svg class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-charcoal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <input id="search-input" type="search" placeholder="Cari sofa, meja, lemari, kursi..."
+            class="w-full pl-12 pr-4 py-3.5 rounded-2xl border-0 bg-white/95 dark:bg-charcoal-900/90 backdrop-blur-md text-sm
+                   placeholder-charcoal-400 shadow-dialog focus:outline-none focus:ring-2 focus:ring-wood-500 transition">
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ FILTER + GRID ═══════════════ -->
+    <section class="py-10 sm:py-14">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <!-- ═══ FILTER BAR (sticky, glassmorphism) ═══ -->
+        <div id="filter-bar"
+          class="sticky top-16 z-30 -mx-4 sm:mx-0 px-4 sm:px-5 py-3.5 mb-8 sm:rounded-2xl
+                 bg-white/80 dark:bg-charcoal-900/80 backdrop-blur-md border border-charcoal-100 dark:border-charcoal-800 shadow-card
+                 flex flex-wrap items-center gap-3">
+
+          <!-- Kategori chip (diisi JS) -->
+          <div id="kategori-chips" class="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+            <div class="animate-skeleton bg-charcoal-100 dark:bg-charcoal-800 rounded-full h-8 w-20"></div>
+            <div class="animate-skeleton bg-charcoal-100 dark:bg-charcoal-800 rounded-full h-8 w-24"></div>
+            <div class="animate-skeleton bg-charcoal-100 dark:bg-charcoal-800 rounded-full h-8 w-16"></div>
+          </div>
+
+          <!-- Sort -->
+          <select id="sort-select" class="input-field w-auto text-xs py-2">
+            <option value="created_at:desc">Terbaru</option>
+            <option value="order_count:desc">Terlaris</option>
+            <option value="harga_jual:asc">Harga Terendah</option>
+            <option value="harga_jual:desc">Harga Tertinggi</option>
+            <option value="rating:desc">Rating Tertinggi</option>
+          </select>
+        </div>
+
+        <!-- Info hasil -->
+        <div class="flex items-center justify-between mb-5">
+          <p id="hasil-info" class="text-sm text-charcoal-500 dark:text-charcoal-400">Memuat produk...</p>
+          <button id="btn-reset-filter" class="hidden text-xs font-medium text-wood-600 hover:text-wood-700">
+            Reset filter ✕
+          </button>
+        </div>
+
+        <!-- ═══ GRID PRODUK ═══ -->
+        <div id="produk-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+          <!-- Loading skeleton -->
+          <div class="animate-skeleton bg-charcoal-100 dark:bg-charcoal-800 rounded-2xl h-72"></div>
+          <div class="animate-skeleton bg-charcoal-100 dark:bg-charcoal-800 rounded-2xl h-72"></div>
+          <div class="animate-skeleton bg-charcoal-100 dark:bg-charcoal-800 rounded-2xl h-72"></div>
+          <div class="animate-skeleton bg-charcoal-100 dark:bg-charcoal-800 rounded-2xl h-72"></div>
+        </div>
+
+        <!-- Empty state -->
+        <div id="empty-state" class="hidden text-center py-20">
+          <p class="text-5xl mb-4">🔍</p>
+          <p class="font-medium mb-1">Produk tidak ditemukan</p>
+          <p class="text-sm text-charcoal-400 mb-5">Coba kata kunci atau filter lain</p>
+          <button id="btn-empty-reset" class="btn-outline px-5 py-2 rounded-xl text-sm">Reset Pencarian</button>
+        </div>
+
+        <!-- ═══ PAGINATION ═══ -->
+        <div id="pagination" class="flex justify-center items-center gap-2 mt-10"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ═══════════════ FOOTER ═══════════════ -->
+  <footer class="bg-charcoal-950 text-charcoal-400 py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid md:grid-cols-3 gap-8 mb-8">
+        <div>
+          <p class="font-serif text-xl text-white font-semibold mb-3">NataRuang</p>
+          <p class="text-sm leading-relaxed">Furniture premium untuk Malang Raya — Kota Malang, Kab. Malang, Kota Batu.</p>
+        </div>
+        <div>
+          <p class="text-white text-sm font-semibold mb-3">Navigasi</p>
+          <ul class="space-y-2 text-sm">
+            <li><a href="/" class="hover:text-white transition">Beranda</a></li>
+            <li><a href="/produk.html" class="hover:text-white transition">Katalog Produk</a></li>
+            <li><a href="/status.html" class="hover:text-white transition">Cek Pesanan</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="text-white text-sm font-semibold mb-3">Wilayah Layanan</p>
+          <p class="text-sm">Kota Malang &middot; Kabupaten Malang &middot; Kota Batu</p>
+        </div>
+      </div>
+      <div class="border-t border-charcoal-800 pt-6 text-center text-xs">
+        <p>&copy; <span id="footer-year"></span> NataRuang. Hak cipta dilindungi.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ═══════════════ CART DRAWER ═══════════════ -->
+  <div id="cart-overlay" class="fixed inset-0 bg-black/40 z-40 hidden" aria-hidden="true"></div>
+  <aside id="cart-drawer"
+    class="fixed top-0 right-0 h-full w-full sm:w-96 bg-white dark:bg-charcoal-900 shadow-dialog z-50 transform translate-x-full transition-transform duration-300 flex flex-col"
+    aria-label="Keranjang belanja">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-charcoal-100 dark:border-charcoal-800">
+      <h2 class="font-semibold">Keranjang</h2>
+      <button id="btn-cart-close" aria-label="Tutup keranjang"
+        class="p-2 rounded-lg hover:bg-charcoal-100 dark:hover:bg-charcoal-800 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div id="cart-items" class="flex-1 overflow-y-auto p-5 space-y-4"></div>
+    <div class="p-5 border-t border-charcoal-100 dark:border-charcoal-800">
+      <div class="flex justify-between items-center mb-4">
+        <span class="text-charcoal-500 text-sm">Total</span>
+        <span id="cart-total" class="font-semibold text-lg">Rp 0</span>
+      </div>
+      <a href="/checkout.html" id="btn-checkout"
+        class="btn-primary w-full py-3 rounded-xl text-sm font-semibold text-center block">
+        Proses Pesanan
+      </a>
+    </div>
+  </aside>
+
+  <!-- ═══════════════ QUICK VIEW MODAL (Detail Produk) ═══════════════ -->
+  <div id="qv-overlay" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+    <div id="qv-box" class="bg-white dark:bg-charcoal-900 rounded-2xl shadow-dialog w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div id="qv-content" class="p-6"></div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/pages/produk.js"></script>
+</body>
+</html>

@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="id" class="">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="NataRuang — Toko furniture online berkualitas premium dengan harga terjangkau. Sofa, meja, lemari, kursi, dan lebih banyak lagi.">
+  <meta name="robots" content="index, follow">
+
+  <!-- Open Graph -->
+  <meta property="og:type"        content="website">
+  <meta property="og:title"       content="NataRuang — Furniture Premium Malang Raya">
+  <meta property="og:description" content="Toko furniture online terpercaya. Kualitas premium, harga terjangkau.">
+  <meta property="og:image"       content="/images/og-image.jpg">
+  <meta property="og:url"         content="https://nataruang.vercel.app">
+
+  <!-- Schema.org -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FurnitureStore",
+    "name": "NataRuang",
+    "url": "https://nataruang.vercel.app",
+    "logo": "/images/logo.png",
+    "areaServed": ["Kota Malang", "Kabupaten Malang", "Kota Batu"],
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "contactType": "customer service",
+      "availableLanguage": "Indonesian"
+    }
+  }
+  </script>
+
+  <title>NataRuang — Furniture Premium Malang Raya</title>
+  <link rel="icon" href="/icons/favicon.ico">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+
+  <!-- Tailwind (build output) -->
+  <link rel="stylesheet" href="/src/styles/main.css">
+</head>
+
+<body class="bg-white dark:bg-charcoal-950 text-charcoal-900 dark:text-charcoal-100 font-sans antialiased">
+
+  <!-- ═══════════════ NAVBAR ═══════════════ -->
+  <header id="navbar" class="fixed top-0 inset-x-0 z-50 transition-all duration-300">
+    <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+
+      <!-- Logo -->
+      <a href="/" class="flex items-center gap-2 font-serif text-xl font-semibold">
+        <span class="text-wood-600">Nata</span>
+        <span class="text-charcoal-900 dark:text-white">Ruang</span>
+      </a>
+
+      <!-- Menu desktop -->
+      <ul class="hidden md:flex items-center gap-6 text-sm font-medium">
+        <li><a href="#beranda"    class="nav-link">Beranda</a></li>
+        <li><a href="/produk.html" class="nav-link">Produk</a></li>
+        <li><a href="#tentang"   class="nav-link">Tentang</a></li>
+        <li><a href="#kontak"    class="nav-link">Kontak</a></li>
+      </ul>
+
+      <!-- Aksi kanan -->
+      <div class="flex items-center gap-3">
+        <!-- Dark mode toggle -->
+        <button id="btn-darkmode" aria-label="Toggle dark mode"
+          class="p-2 rounded-lg hover:bg-charcoal-100 dark:hover:bg-charcoal-800 transition">
+          <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <svg class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+          </svg>
+        </button>
+
+        <!-- Keranjang -->
+        <a href="#" id="btn-cart" aria-label="Keranjang belanja"
+          class="relative p-2 rounded-lg hover:bg-charcoal-100 dark:hover:bg-charcoal-800 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
+          <span id="cart-badge"
+            class="absolute -top-0.5 -right-0.5 w-4 h-4 text-[10px] font-bold bg-wood-500 text-white rounded-full flex items-center justify-center hidden">
+            0
+          </span>
+        </a>
+
+        <!-- Hamburger mobile -->
+        <button id="btn-menu" class="md:hidden p-2 rounded-lg hover:bg-charcoal-100 dark:hover:bg-charcoal-800" aria-label="Buka menu">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="hidden md:hidden bg-white dark:bg-charcoal-950 border-t border-charcoal-100 dark:border-charcoal-800">
+      <ul class="px-4 py-3 space-y-1 text-sm font-medium">
+        <li><a href="#beranda"     class="block py-2 nav-link">Beranda</a></li>
+        <li><a href="/produk.html" class="block py-2 nav-link">Produk</a></li>
+        <li><a href="#tentang"     class="block py-2 nav-link">Tentang</a></li>
+        <li><a href="#kontak"      class="block py-2 nav-link">Kontak</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ═══════════════ HERO BANNER ═══════════════ -->
+    <section id="beranda" class="relative min-h-screen flex items-center pt-16 overflow-hidden bg-charcoal-50 dark:bg-charcoal-900">
+
+      <!-- Slider container -->
+      <div id="banner-slider" class="absolute inset-0 overflow-hidden">
+        <div id="banner-track" class="flex h-full transition-transform duration-700 ease-in-out">
+          <!-- Slide diisi JS -->
+        </div>
+        <!-- Overlay gradient -->
+        <div class="absolute inset-0 bg-gradient-to-r from-charcoal-950/60 to-transparent"></div>
+      </div>
+
+      <!-- Konten hero -->
+      <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+        <div class="max-w-2xl animate-fade-in">
+          <p class="text-wood-400 text-sm font-medium uppercase tracking-widest mb-3">Koleksi Terbaru 2026 · Malang Raya</p>
+          <h1 id="hero-title" class="font-serif text-4xl md:text-6xl font-semibold text-white leading-tight mb-5">
+            Wujudkan Rumah<br>Impian Anda
+          </h1>
+          <p id="hero-sub" class="text-charcoal-200 text-lg mb-8 leading-relaxed">
+            Furniture premium pilihan pengrajin terbaik, melayani Kota Malang, Kab. Malang, dan Kota Batu.<br>Kualitas nyata, harga yang masuk akal.
+          </p>
+          <div class="flex flex-wrap gap-3">
+            <a href="/produk.html"
+              class="btn-primary px-6 py-3 rounded-xl text-sm font-semibold inline-flex items-center gap-2">
+              Lihat Koleksi
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </a>
+            <a href="#kontak"
+              class="btn-outline px-6 py-3 rounded-xl text-sm font-semibold text-white border-white/30 hover:bg-white/10">
+              Konsultasi Gratis
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dots slider -->
+      <div id="banner-dots" class="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2"></div>
+    </section>
+
+    <!-- ═══════════════ KATEGORI ═══════════════ -->
+    <section class="py-16 bg-white dark:bg-charcoal-950">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-10">
+          <h2 class="font-serif text-3xl font-semibold mb-2">Kategori Produk</h2>
+          <p class="text-charcoal-500 dark:text-charcoal-400">Temukan furniture sesuai kebutuhan ruangan Anda</p>
+        </div>
+        <div id="kategori-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <!-- Skeleton -->
+          <div class="animate-skeleton bg-charcoal-100 dark:bg-charcoal-800 rounded-2xl h-28"></div>
+          <div class="animate-skeleton bg-charcoal-100 dark:bg-charcoal-800 rounded-2xl h-28"></div>
+          <div class="animate-skeleton bg-charcoal-100 dark:bg-charcoal-800 rounded-2xl h-28"></div>
+          <div class="animate-skeleton bg-charcoal-100 dark:bg-charcoal-800 rounded-2xl h-28"></div>
+          <div class="animate-skeleton bg-charcoal-100 dark:bg-charcoal-800 rounded-2xl h-28"></div>
+          <div class="animate-skeleton bg-charcoal-100 dark:bg-charcoal-800 rounded-2xl h-28"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ PRODUK TERBARU ═══════════════ -->
+    <section class="py-16 bg-charcoal-50 dark:bg-charcoal-900">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-end justify-between mb-10">
+          <div>
+            <h2 class="font-serif text-3xl font-semibold mb-2">Produk Terbaru</h2>
+            <p class="text-charcoal-500 dark:text-charcoal-400">Koleksi terkini pilihan tim kami</p>
+          </div>
+          <a href="/produk.html" class="text-wood-600 hover:text-wood-700 text-sm font-medium hidden sm:block">
+            Lihat semua →
+          </a>
+        </div>
+        <div id="produk-terbaru-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          <!-- Diisi JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ PRODUK TERLARIS ═══════════════ -->
+    <section class="py-16 bg-white dark:bg-charcoal-950">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-end justify-between mb-10">
+          <div>
+            <h2 class="font-serif text-3xl font-semibold mb-2">Produk Terlaris</h2>
+            <p class="text-charcoal-500 dark:text-charcoal-400">Dipercaya ribuan pelanggan kami</p>
+          </div>
+          <a href="/produk.html?sort=order_count" class="text-wood-600 hover:text-wood-700 text-sm font-medium hidden sm:block">
+            Lihat semua →
+          </a>
+        </div>
+        <div id="produk-terlaris-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          <!-- Diisi JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ PROMO BANNER ═══════════════ -->
+    <section class="py-10 bg-wood-600">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <p class="font-serif text-2xl md:text-4xl font-semibold text-white mb-3">Gratis Konsultasi Desain Interior</p>
+        <p class="text-wood-200 mb-6">Hubungi kami dan dapatkan rekomendasi furniture sesuai gaya dan budget Anda</p>
+        <a id="promo-wa" href="#" target="_blank" rel="noopener"
+          class="inline-flex items-center gap-2 bg-white text-wood-700 px-6 py-3 rounded-xl font-semibold text-sm hover:bg-wood-50 transition">
+          <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+            <path d="M12 0C5.373 0 0 5.373 0 12c0 2.083.528 4.04 1.465 5.743L.036 23.5l5.875-1.406A11.942 11.942 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.032-1.38l-.36-.214-3.735.89.942-3.617-.235-.37A9.773 9.773 0 012.182 12C2.182 6.578 6.578 2.182 12 2.182S21.818 6.578 21.818 12 17.422 21.818 12 21.818z"/>
+          </svg>
+          Chat WhatsApp Sekarang
+        </a>
+      </div>
+    </section>
+
+    <!-- ═══════════════ TESTIMONI ═══════════════ -->
+    <section class="py-16 bg-charcoal-50 dark:bg-charcoal-900">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-10">
+          <h2 class="font-serif text-3xl font-semibold mb-2">Apa Kata Pelanggan Kami</h2>
+          <p class="text-charcoal-500 dark:text-charcoal-400">Ulasan nyata dari pelanggan yang sudah berbelanja</p>
+        </div>
+        <div id="testimoni-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <!-- Diisi JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ TENTANG ═══════════════ -->
+    <section id="tentang" class="py-16 bg-white dark:bg-charcoal-950">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid md:grid-cols-2 gap-12 items-center">
+          <div class="rounded-2xl overflow-hidden bg-charcoal-100 dark:bg-charcoal-800 aspect-[4/3]">
+            <img id="foto-toko" src="" alt="Toko furniture kami" class="w-full h-full object-cover" loading="lazy">
+          </div>
+          <div>
+            <p class="text-wood-600 text-sm font-medium uppercase tracking-widest mb-3">Tentang Kami</p>
+            <h2 class="font-serif text-3xl font-semibold mb-5" id="ttg-judul">
+              Kualitas yang Kami Jaga,<br>Kepuasan yang Anda Rasakan
+            </h2>
+            <p class="text-charcoal-600 dark:text-charcoal-400 leading-relaxed mb-5" id="ttg-deskripsi">
+              NataRuang hadir untuk mewujudkan hunian impian Anda dengan furniture berkualitas dari pengrajin terpilih.
+              Setiap produk dirancang dengan mempertimbangkan estetika, kenyamanan, dan ketahanan.
+            </p>
+            <div class="grid grid-cols-3 gap-4 text-center">
+              <div class="p-4 bg-charcoal-50 dark:bg-charcoal-800 rounded-xl">
+                <p class="font-serif text-2xl font-semibold text-wood-600" id="stat-produk">500+</p>
+                <p class="text-xs text-charcoal-500 mt-1">Produk</p>
+              </div>
+              <div class="p-4 bg-charcoal-50 dark:bg-charcoal-800 rounded-xl">
+                <p class="font-serif text-2xl font-semibold text-wood-600" id="stat-pelanggan">2.000+</p>
+                <p class="text-xs text-charcoal-500 mt-1">Pelanggan</p>
+              </div>
+              <div class="p-4 bg-charcoal-50 dark:bg-charcoal-800 rounded-xl">
+                <p class="font-serif text-2xl font-semibold text-wood-600" id="stat-kota">50+</p>
+                <p class="text-xs text-charcoal-500 mt-1">Kota</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ KONTAK ═══════════════ -->
+    <section id="kontak" class="py-16 bg-charcoal-50 dark:bg-charcoal-900">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-10">
+          <h2 class="font-serif text-3xl font-semibold mb-2">Hubungi Kami</h2>
+          <p class="text-charcoal-500 dark:text-charcoal-400">Kami siap membantu 6 hari seminggu</p>
+        </div>
+        <div class="grid md:grid-cols-2 gap-8">
+          <!-- Info kontak -->
+          <div class="space-y-4">
+            <div class="flex gap-4 p-5 bg-white dark:bg-charcoal-800 rounded-2xl shadow-card">
+              <div class="w-10 h-10 bg-wood-100 dark:bg-wood-900 rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-wood-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+              </div>
+              <div>
+                <p class="font-medium text-sm mb-1">Alamat</p>
+                <p class="text-charcoal-500 dark:text-charcoal-400 text-sm" id="info-alamat">-</p>
+              </div>
+            </div>
+            <div class="flex gap-4 p-5 bg-white dark:bg-charcoal-800 rounded-2xl shadow-card">
+              <div class="w-10 h-10 bg-green-50 dark:bg-green-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/>
+                  <path d="M12 0C5.373 0 0 5.373 0 12c0 2.083.528 4.04 1.465 5.743L.036 23.5l5.875-1.406A11.942 11.942 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.032-1.38l-.36-.214-3.735.89.942-3.617-.235-.37A9.773 9.773 0 012.182 12C2.182 6.578 6.578 2.182 12 2.182S21.818 6.578 21.818 12 17.422 21.818 12 21.818z"/>
+                </svg>
+              </div>
+              <div>
+                <p class="font-medium text-sm mb-1">WhatsApp</p>
+                <a id="info-wa" href="#" class="text-green-600 hover:underline text-sm">-</a>
+              </div>
+            </div>
+            <div class="flex gap-4 p-5 bg-white dark:bg-charcoal-800 rounded-2xl shadow-card">
+              <div class="w-10 h-10 bg-charcoal-100 dark:bg-charcoal-700 rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-charcoal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+              <div>
+                <p class="font-medium text-sm mb-1">Jam Operasional</p>
+                <p class="text-charcoal-500 dark:text-charcoal-400 text-sm" id="info-jam">-</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Google Maps -->
+          <div class="rounded-2xl overflow-hidden bg-charcoal-200 dark:bg-charcoal-800 h-64 md:h-auto min-h-48">
+            <div id="maps-container" class="w-full h-full">
+              <p class="text-charcoal-400 text-sm flex items-center justify-center h-full">Peta belum dikonfigurasi</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ═══════════════ FOOTER ═══════════════ -->
+  <footer class="bg-charcoal-950 text-charcoal-400 py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid md:grid-cols-3 gap-8 mb-8">
+        <div>
+          <p class="font-serif text-xl text-white font-semibold mb-3">NataRuang</p>
+          <p class="text-sm leading-relaxed" id="footer-tagline">Kualitas Premium, Harga Terjangkau</p>
+        </div>
+        <div>
+          <p class="text-white text-sm font-semibold mb-3">Navigasi</p>
+          <ul class="space-y-2 text-sm">
+            <li><a href="/"            class="hover:text-white transition">Beranda</a></li>
+            <li><a href="/produk.html" class="hover:text-white transition">Katalog Produk</a></li>
+            <li><a href="/status.html" class="hover:text-white transition">Cek Pesanan</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="text-white text-sm font-semibold mb-3">Sosial Media</p>
+          <div class="flex gap-3" id="footer-sosmed">
+            <!-- Diisi JS -->
+          </div>
+        </div>
+      </div>
+      <div class="border-t border-charcoal-800 pt-6 text-center text-xs">
+        <p>&copy; <span id="footer-year"></span> NataRuang. Hak cipta dilindungi.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ═══════════════ CHATBOT WIDGET ═══════════════ -->
+  <div id="chatbot-wrapper" class="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
+
+    <!-- Panel chat -->
+    <div id="chatbot-panel"
+      class="hidden w-80 bg-white dark:bg-charcoal-900 rounded-2xl shadow-dialog border border-charcoal-100 dark:border-charcoal-800 flex flex-col overflow-hidden"
+      style="max-height: 480px">
+
+      <!-- Header -->
+      <div class="flex items-center gap-3 px-4 py-3 border-b border-charcoal-100 dark:border-charcoal-800 bg-charcoal-50 dark:bg-charcoal-800">
+        <div class="w-8 h-8 bg-wood-600 rounded-full flex items-center justify-center flex-shrink-0">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+          </svg>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold truncate">Asisten Toko</p>
+          <p class="text-xs text-charcoal-500">Online sekarang</p>
+        </div>
+        <button id="btn-chatbot-close" aria-label="Tutup chat"
+          class="p-1 rounded-lg hover:bg-charcoal-200 dark:hover:bg-charcoal-700 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Riwayat chat -->
+      <div id="chatbot-messages" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+
+      <!-- Quick reply -->
+      <div id="chatbot-quickreply" class="px-3 pb-2 flex flex-wrap gap-2"></div>
+
+      <!-- Input -->
+      <div class="p-3 border-t border-charcoal-100 dark:border-charcoal-800">
+        <div class="flex gap-2">
+          <input id="chatbot-input" type="text" placeholder="Tulis pertanyaan..."
+            class="flex-1 text-sm border border-charcoal-200 dark:border-charcoal-700 rounded-xl px-3 py-2 bg-white dark:bg-charcoal-800 focus:outline-none focus:ring-2 focus:ring-wood-500">
+          <button id="btn-chatbot-send" aria-label="Kirim"
+            class="w-9 h-9 bg-wood-600 hover:bg-wood-700 text-white rounded-xl flex items-center justify-center transition flex-shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+            </svg>
+          </button>
+        </div>
+        <!-- WA eskalasi -->
+        <button id="btn-chatbot-wa" class="mt-2 w-full text-xs text-green-600 hover:text-green-700 flex items-center justify-center gap-1 transition">
+          <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/>
+            <path d="M12 0C5.373 0 0 5.373 0 12c0 2.083.528 4.04 1.465 5.743L.036 23.5l5.875-1.406A11.942 11.942 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.032-1.38l-.36-.214-3.735.89.942-3.617-.235-.37A9.773 9.773 0 012.182 12C2.182 6.578 6.578 2.182 12 2.182S21.818 6.578 21.818 12 17.422 21.818 12 21.818z"/>
+          </svg>
+          Lanjut chat di WhatsApp
+        </button>
+      </div>
+    </div>
+
+    <!-- Tombol buka chatbot -->
+    <button id="btn-chatbot-open" aria-label="Buka asisten chat"
+      class="w-14 h-14 bg-wood-600 hover:bg-wood-700 text-white rounded-full shadow-dialog flex items-center justify-center transition animate-float">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- ═══════════════ CART DRAWER ═══════════════ -->
+  <div id="cart-overlay" class="fixed inset-0 bg-black/40 z-40 hidden" aria-hidden="true"></div>
+  <aside id="cart-drawer"
+    class="fixed top-0 right-0 h-full w-full sm:w-96 bg-white dark:bg-charcoal-900 shadow-dialog z-50 transform translate-x-full transition-transform duration-300 flex flex-col"
+    aria-label="Keranjang belanja">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-charcoal-100 dark:border-charcoal-800">
+      <h2 class="font-semibold">Keranjang</h2>
+      <button id="btn-cart-close" aria-label="Tutup keranjang"
+        class="p-2 rounded-lg hover:bg-charcoal-100 dark:hover:bg-charcoal-800 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div id="cart-items" class="flex-1 overflow-y-auto p-5 space-y-4"></div>
+    <div class="p-5 border-t border-charcoal-100 dark:border-charcoal-800">
+      <div class="flex justify-between items-center mb-4">
+        <span class="text-charcoal-500 text-sm">Total</span>
+        <span id="cart-total" class="font-semibold text-lg">Rp 0</span>
+      </div>
+      <a href="/checkout.html" id="btn-checkout"
+        class="btn-primary w-full py-3 rounded-xl text-sm font-semibold text-center block">
+        Proses Pesanan
+      </a>
+    </div>
+  </aside>
+
+  <!-- Script utama -->
+  <script type="module" src="/src/pages/index.js"></script>
+</body>
+</html>

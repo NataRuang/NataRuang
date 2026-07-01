@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="id" class="">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Checkout — NataRuang</title>
+  <link rel="icon" href="/icons/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/styles/main.css">
+</head>
+<body class="bg-charcoal-50 dark:bg-charcoal-950 text-charcoal-900 dark:text-charcoal-100 font-sans antialiased">
+
+  <!-- Navbar minimal -->
+  <header class="sticky top-0 z-40 bg-white/95 dark:bg-charcoal-950/95 backdrop-blur-md border-b border-charcoal-100 dark:border-charcoal-800">
+    <div class="max-w-5xl mx-auto px-4 h-14 flex items-center gap-4">
+      <a href="/" class="font-serif text-lg font-semibold">
+        <span class="text-wood-600">Nata</span><span class="dark:text-white">Ruang</span>
+      </a>
+      <span class="text-charcoal-300 dark:text-charcoal-600">/</span>
+      <span class="text-sm text-charcoal-500">Checkout</span>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-8">
+
+    <!-- Step indicator -->
+    <div class="flex items-center gap-2 mb-8 text-xs font-medium">
+      <span class="flex items-center gap-1.5 text-wood-600">
+        <span class="w-5 h-5 rounded-full bg-wood-600 text-white flex items-center justify-center text-[10px] font-bold">1</span>
+        Data Pembeli
+      </span>
+      <span class="flex-1 h-px bg-charcoal-200 dark:bg-charcoal-700"></span>
+      <span class="flex items-center gap-1.5 text-charcoal-400" id="step2-label">
+        <span class="w-5 h-5 rounded-full bg-charcoal-200 dark:bg-charcoal-700 text-charcoal-500 flex items-center justify-center text-[10px] font-bold">2</span>
+        Pengiriman
+      </span>
+      <span class="flex-1 h-px bg-charcoal-200 dark:bg-charcoal-700"></span>
+      <span class="flex items-center gap-1.5 text-charcoal-400" id="step3-label">
+        <span class="w-5 h-5 rounded-full bg-charcoal-200 dark:bg-charcoal-700 text-charcoal-500 flex items-center justify-center text-[10px] font-bold">3</span>
+        Pembayaran
+      </span>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+
+      <!-- ── Kolom kiri: form ── -->
+      <div class="lg:col-span-2 space-y-5">
+
+        <!-- Keranjang kosong guard -->
+        <div id="empty-cart" class="hidden text-center py-16">
+          <p class="text-5xl mb-4">🛒</p>
+          <p class="font-medium mb-2">Keranjang kosong</p>
+          <a href="/produk.html" class="text-wood-600 hover:underline text-sm">Kembali belanja</a>
+        </div>
+
+        <!-- SECTION 1: Data pembeli -->
+        <section class="bg-white dark:bg-charcoal-900 rounded-2xl p-6 shadow-card" id="sec-pembeli">
+          <h2 class="font-semibold mb-5 flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-wood-600 text-white text-xs font-bold flex items-center justify-center">1</span>
+            Data Pembeli
+          </h2>
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div class="sm:col-span-2">
+              <label class="label" for="nama">Nama lengkap <span class="text-red-500">*</span></label>
+              <input id="nama" type="text" class="input-field w-full" placeholder="Nama sesuai KTP" required maxlength="150">
+            </div>
+            <div>
+              <label class="label" for="nomor_wa">Nomor WhatsApp <span class="text-red-500">*</span></label>
+              <input id="nomor_wa" type="tel" class="input-field w-full" placeholder="08xxxxxxxxxx" required>
+              <p class="text-xs text-charcoal-400 mt-1">Info pesanan dikirim ke nomor ini</p>
+            </div>
+            <div>
+              <label class="label" for="email">Email <span class="text-charcoal-400 font-normal">(opsional)</span></label>
+              <input id="email" type="email" class="input-field w-full" placeholder="email@contoh.com">
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 2: Alamat & Ongkir -->
+        <section class="bg-white dark:bg-charcoal-900 rounded-2xl p-6 shadow-card" id="sec-alamat">
+          <h2 class="font-semibold mb-5 flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-wood-600 text-white text-xs font-bold flex items-center justify-center">2</span>
+            Alamat Pengiriman
+          </h2>
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label class="label" for="provinsi">Provinsi <span class="text-red-500">*</span></label>
+              <input id="provinsi" type="text" class="input-field w-full" placeholder="Jawa Timur" required>
+            </div>
+            <div>
+              <label class="label" for="kota">Kota/Kabupaten <span class="text-red-500">*</span></label>
+              <input id="kota" type="text" class="input-field w-full" placeholder="Malang" required>
+            </div>
+            <div>
+              <label class="label" for="kecamatan">Kecamatan</label>
+              <input id="kecamatan" type="text" class="input-field w-full" placeholder="Lowokwaru">
+            </div>
+            <div>
+              <label class="label" for="kelurahan">Kelurahan/Desa</label>
+              <input id="kelurahan" type="text" class="input-field w-full" placeholder="Tlogomas">
+            </div>
+            <div>
+              <label class="label" for="kode_pos">Kode Pos</label>
+              <input id="kode_pos" type="text" class="input-field w-full" placeholder="65144" maxlength="5">
+            </div>
+            <div class="sm:col-span-2">
+              <label class="label" for="alamat">Alamat lengkap <span class="text-red-500">*</span></label>
+              <textarea id="alamat" rows="3" class="input-field w-full resize-none" placeholder="Nama jalan, nomor rumah, RT/RW, patokan" required></textarea>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="label" for="catatan">Catatan tambahan</label>
+              <textarea id="catatan" rows="2" class="input-field w-full resize-none" placeholder="Instruksi khusus untuk pengemudi, waktu pengiriman, dll."></textarea>
+            </div>
+          </div>
+
+          <!-- Estimasi Ongkir -->
+          <div class="mt-5 pt-5 border-t border-charcoal-100 dark:border-charcoal-800">
+            <div class="flex items-center justify-between mb-3">
+              <p class="font-medium text-sm">Metode Pengiriman</p>
+              <button id="btn-cek-ongkir"
+                class="text-xs text-wood-600 hover:text-wood-700 font-medium flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Cek ongkir
+              </button>
+            </div>
+            <div id="ongkir-result">
+              <p class="text-xs text-charcoal-400 flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Isi kota tujuan lalu klik "Cek ongkir"
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 3: Pembayaran -->
+        <section class="bg-white dark:bg-charcoal-900 rounded-2xl p-6 shadow-card" id="sec-bayar">
+          <h2 class="font-semibold mb-5 flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-wood-600 text-white text-xs font-bold flex items-center justify-center">3</span>
+            Metode Pembayaran
+          </h2>
+          <div class="space-y-3">
+            <label class="flex items-center gap-3 p-4 border border-charcoal-200 dark:border-charcoal-700 rounded-xl cursor-pointer hover:border-wood-400 transition has-[:checked]:border-wood-500 has-[:checked]:bg-wood-50 dark:has-[:checked]:bg-wood-900/20">
+              <input type="radio" name="metode_bayar" value="transfer_bank" class="text-wood-600" checked>
+              <div class="flex-1">
+                <p class="text-sm font-medium">Transfer Bank</p>
+                <p class="text-xs text-charcoal-400">BCA, Mandiri, BRI, BNI, dan lainnya</p>
+              </div>
+              <span class="text-xl">🏦</span>
+            </label>
+            <label class="flex items-center gap-3 p-4 border border-charcoal-200 dark:border-charcoal-700 rounded-xl cursor-pointer hover:border-wood-400 transition has-[:checked]:border-wood-500 has-[:checked]:bg-wood-50 dark:has-[:checked]:bg-wood-900/20">
+              <input type="radio" name="metode_bayar" value="qris" class="text-wood-600">
+              <div class="flex-1">
+                <p class="text-sm font-medium">QRIS</p>
+                <p class="text-xs text-charcoal-400">Scan kode QR dengan aplikasi bank atau e-wallet</p>
+              </div>
+              <span class="text-xl">📱</span>
+            </label>
+          </div>
+          <p class="text-xs text-charcoal-400 mt-4 flex items-start gap-1.5">
+            <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Pembayaran dilakukan manual. Setelah memesan, Anda akan mendapatkan nomor invoice dan instruksi transfer.
+          </p>
+        </section>
+
+        <!-- Tombol submit -->
+        <button id="btn-pesan" class="w-full py-4 rounded-xl bg-charcoal-900 dark:bg-white text-white dark:text-charcoal-900 font-semibold hover:bg-wood-600 transition flex items-center justify-center gap-2">
+          <span id="btn-pesan-label">Buat Pesanan</span>
+          <svg id="btn-pesan-spinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+        </button>
+
+      </div>
+
+      <!-- ── Kolom kanan: ringkasan ── -->
+      <aside>
+        <div class="bg-white dark:bg-charcoal-900 rounded-2xl p-5 shadow-card sticky top-20">
+          <h2 class="font-semibold mb-4 text-sm">Ringkasan Pesanan</h2>
+          <div id="summary-items" class="space-y-3 mb-4 max-h-64 overflow-y-auto"></div>
+          <div class="space-y-2 pt-4 border-t border-charcoal-100 dark:border-charcoal-800 text-sm">
+            <div class="flex justify-between">
+              <span class="text-charcoal-500">Subtotal</span>
+              <span id="sum-subtotal">Rp 0</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-charcoal-500">Ongkos kirim</span>
+              <span id="sum-ongkir" class="text-charcoal-400">Belum dipilih</span>
+            </div>
+            <div class="flex justify-between font-semibold text-base pt-2 border-t border-charcoal-100 dark:border-charcoal-800">
+              <span>Total</span>
+              <span id="sum-total" class="text-wood-700 dark:text-wood-400">Rp 0</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+  <script type="module" src="/src/pages/checkout.js"></script>
+</body>
+</html>

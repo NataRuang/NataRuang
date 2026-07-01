@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="id" class="">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Login Admin — NataRuang</title>
+  <link rel="icon" href="/icons/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/styles/main.css">
+</head>
+<body class="bg-charcoal-50 dark:bg-charcoal-950 text-charcoal-900 dark:text-charcoal-100 font-sans antialiased min-h-screen flex items-center justify-center p-4">
+
+  <div class="w-full max-w-sm">
+
+    <!-- Logo -->
+    <div class="text-center mb-8">
+      <a href="/" class="font-serif text-2xl font-semibold inline-block">
+        <span class="text-wood-600">Nata</span>
+        <span class="text-charcoal-900 dark:text-white">Ruang</span>
+      </a>
+      <p class="text-charcoal-500 dark:text-charcoal-400 text-sm mt-1">Panel Administrator</p>
+    </div>
+
+    <!-- Card form -->
+    <div class="bg-white dark:bg-charcoal-900 rounded-2xl shadow-card p-8">
+      <h1 class="text-xl font-semibold mb-6">Masuk</h1>
+
+      <!-- Alert error -->
+      <div id="alert-error" class="hidden mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400"></div>
+
+      <form id="form-login" novalidate>
+        <div class="space-y-4">
+
+          <div>
+            <label for="email" class="block text-sm font-medium mb-1.5">Email</label>
+            <input id="email" type="email" name="email" autocomplete="email"
+              placeholder="admin@example.com" required
+              class="input-field w-full">
+            <p class="text-red-500 text-xs mt-1 hidden" id="err-email">Email tidak valid</p>
+          </div>
+
+          <div>
+            <label for="password" class="block text-sm font-medium mb-1.5">Password</label>
+            <div class="relative">
+              <input id="password" type="password" name="password" autocomplete="current-password"
+                placeholder="••••••••" required minlength="6"
+                class="input-field w-full pr-10">
+              <button type="button" id="btn-show-pw" aria-label="Tampilkan password"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-charcoal-400 hover:text-charcoal-600 transition">
+                <svg id="icon-eye" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+                <svg id="icon-eye-off" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                </svg>
+              </button>
+            </div>
+            <p class="text-red-500 text-xs mt-1 hidden" id="err-password">Password minimal 6 karakter</p>
+          </div>
+
+        </div>
+
+        <button type="submit" id="btn-submit"
+          class="mt-6 w-full py-3 rounded-xl bg-charcoal-900 dark:bg-white text-white dark:text-charcoal-900 font-semibold text-sm hover:bg-wood-600 dark:hover:bg-wood-100 transition flex items-center justify-center gap-2">
+          <span id="btn-label">Masuk</span>
+          <svg id="spinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+        </button>
+      </form>
+    </div>
+
+    <p class="text-center text-xs text-charcoal-400 mt-6">
+      <a href="/" class="hover:text-wood-600 transition">← Kembali ke toko</a>
+    </p>
+  </div>
+
+  <script type="module" src="/src/pages/login.js"></script>
+</body>
+</html>

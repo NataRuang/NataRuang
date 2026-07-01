@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Allow: /produk.html
+Disallow: /admin.html
+Disallow: /login.html
+Disallow: /checkout.html
+Disallow: /status.html
+
+Sitemap: https://nataruang.vercel.app/sitemap.xml
