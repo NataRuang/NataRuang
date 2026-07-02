@@ -65,6 +65,8 @@ npm run dev
 3. Salin seluruh isi `database/schema.sql` → **Run**
 4. Salin seluruh isi `database/002_staff_roles.sql` → **Run**
    (migration ini menambahkan sistem akun staff multi-role: Admin / CS / Finance)
+5. Salin seluruh isi `database/003_live_chat.sql` → **Run**
+   (migration ini menambahkan live chat dua arah antara CS dan pengunjung, realtime)
 
 ### Buat akun staff (Admin / CS / Finance)
 Login staff memakai **username**, bukan email — tapi Supabase Auth tetap butuh
@@ -87,11 +89,17 @@ pembuatan akun dilakukan manual lewat Dashboard:
    langkah 1. Setelah login, password bisa diganti sendiri lewat tombol
    **Ganti Password** di dashboard — tidak perlu lewat Supabase Dashboard lagi.
 
-> Catatan tahap saat ini: dashboard penuh (`admin.html`) baru aktif untuk role
-> **Admin**. Dashboard khusus **CS** (live chat) dan **Finance** (laporan)
-> menyusul di tahap pengembangan berikutnya — akun CS/Finance sudah bisa
-> dibuat & login, tapi untuk sementara akan diarahkan kembali ke halaman
-> login sampai dashboard masing-masing selesai dibangun.
+> Catatan tahap saat ini: dashboard (`admin.html`) sudah bisa diakses oleh
+> ketiga role — **menu di sidebar otomatis menyesuaikan role yang login**:
+> - **Admin**: akses penuh ke semua menu
+> - **CS**: menu Dashboard, Pesanan (lihat & update status), **Live Chat**
+>   (balas pesan pengunjung secara real-time dua arah)
+> - **Finance**: menu Dashboard, Pembayaran (verifikasi), Laporan (export Excel/PDF)
+>
+> Live Chat juga aktif di widget chat halaman beranda (tombol **"Chat
+> langsung dengan CS kami"**) — begitu pengunjung memulai live chat, pesan
+> masuk real-time ke tab Live Chat di dashboard CS, dan balasan CS langsung
+> muncul di widget pengunjung tanpa refresh.
 
 ### Setup Storage
 Di Supabase Dashboard → **Storage** → buat dua bucket:
@@ -260,7 +268,8 @@ nataruang/
 ├── .gitignore
 ├── database/
 │   ├── schema.sql          # Seluruh SQL (tabel, trigger, RLS, view, rating)
-│   └── 002_staff_roles.sql # Migration: akun staff Admin/CS/Finance (login username)
+│   ├── 002_staff_roles.sql # Migration: akun staff Admin/CS/Finance (login username)
+│   └── 003_live_chat.sql   # Migration: live chat CS ↔ pengunjung (realtime)
 ├── public/
 │   ├── images/
 │   ├── icons/

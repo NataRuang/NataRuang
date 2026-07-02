@@ -240,6 +240,19 @@ export function toggleDarkMode() {
   return isDark
 }
 
+// ── Live Chat: Visitor Token ──────────────────────────────────
+// Token acak per browser (BUKAN akun), dipakai widget chat publik
+// untuk mengenali percakapan miliknya sendiri.
+
+export function getVisitorToken() {
+  let token = localStorage.getItem('fs_visitor_token')
+  if (!token) {
+    token = crypto.randomUUID()
+    localStorage.setItem('fs_visitor_token', token)
+  }
+  return token
+}
+
 // ── Misc ───────────────────────────────────────────────────
 
 /** Generate session ID anonim untuk product_views (tanpa data pribadi) */

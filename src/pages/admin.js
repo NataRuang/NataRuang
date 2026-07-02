@@ -2,7 +2,7 @@
 // Logika Dashboard Admin NataRuang — CRUD produk, kategori, pesanan,
 // pembayaran, ongkir, chatbot FAQ, testimoni, laporan, pengaturan.
 
-import { requireAdmin, logoutStaff, changeMyPassword, ROLE_LABELS } from '@/lib/auth.js'
+import { requireRole, logoutStaff, changeMyPassword, ROLE_LABELS } from '@/lib/auth.js'
 import {
   getSettings, updateSetting,
   getCategories, upsertCategory, deleteCategory,
@@ -14,10 +14,12 @@ import {
   getFaqsAdmin, upsertFaq, deleteFaq,
   getTestimonialsAdmin, upsertTestimonial, deleteTestimonial,
   getDashboardSummary, getProdukPalingDilihat, getProdukTerlaris,
-  getPenjualanHarian, getPenjualanBulanan, getOrdersExport
+  getPenjualanHarian, getPenjualanBulanan, getOrdersExport,
+  getPercakapanCS, getPesanPercakapan, kirimPesanCS, updateStatusPercakapan,
+  tandaiPesanDibacaCS, hitungPesanBelumDibaca, subscribeSemuaPercakapan
 } from '@/lib/api.js'
 import {
-  formatRupiah, formatTanggal, escapeHtml, toast, debounce,
+  formatRupiah, formatTanggal, formatDatetime, escapeHtml, toast, debounce,
   initDarkMode, toggleDarkMode
 } from '@/lib/utils.js'
 import { prosesGambarProduk } from '@/lib/watermark.js'
@@ -25,15 +27,13 @@ import { exportOrdersExcel, exportOrdersPDF, cetakNotaPesanan } from '@/lib/repo
 
 let settingsCache = {}
 let currentUser   = null   // { user, profile }
+let unsubChatRealtime = null
 
-// ── Guard: wajib login sebagai Admin ───────────────────────────
-// Catatan: dashboard ini untuk sementara khusus role 'admin'.
-// Dashboard khusus CS & Finance menyusul di tahap berikutnya —
-// akun CS/Finance yang login akan diarahkan kembali ke halaman login
-// dengan pesan "akses ditolak" sampai dashboard mereka siap.
+// ── Guard: wajib login sebagai Admin / CS / Finance ────────────
+// Menu sidebar akan menyesuaikan otomatis sesuai role (lihat applyRoleMenu()).
 ;(async function bootstrap() {
-  currentUser = await requireAdmin()
-  if (!currentUser) return // sudah di-redirect ke login.html oleh requireAdmin()
+  currentUser = await requireRole(['admin', 'cs', 'finance'])
+  if (!currentUser) return // sudah di-redirect ke login.html oleh requireRole()
   await init()
 })()
 
@@ -42,8 +42,10 @@ async function init() {
   document.getElementById('btn-darkmode').addEventListener('click', toggleDarkMode)
 
   renderStaffBadge()
+  applyRoleMenu(currentUser.profile.role)
 
   document.getElementById('btn-logout').addEventListener('click', async () => {
+    if (unsubChatRealtime) unsubChatRealtime()
     await logoutStaff()
     window.location.replace('/login.html')
   })
@@ -68,6 +70,11 @@ async function init() {
     console.error('Gagal memuat pengaturan:', e)
   }
 
+  if (['admin', 'cs'].includes(currentUser.profile.role)) {
+    await perbaruiBadgeLivechat()
+    mulaiRealtimeChatJikaBelum()
+  }
+
   await loadDashboard()
 }
 
@@ -75,7 +82,7 @@ async function init() {
 
 const TAB_TITLES = {
   dashboard: 'Dashboard', produk: 'Produk', kategori: 'Kategori', pesanan: 'Pesanan',
-  pembayaran: 'Pembayaran', ongkir: 'Ongkos Kirim', chatbot: 'Chatbot FAQ',
+  livechat: 'Live Chat', pembayaran: 'Pembayaran', ongkir: 'Ongkos Kirim', chatbot: 'Chatbot FAQ',
   testimoni: 'Testimoni', laporan: 'Laporan', pengaturan: 'Pengaturan'
 }
 
@@ -99,6 +106,7 @@ async function switchTab(tab) {
 
   const loaders = {
     produk: loadProdukTab, kategori: loadKategoriTab, pesanan: loadPesananTab,
+    livechat: loadLiveChatTab,
     pembayaran: loadPembayaranTab, ongkir: loadOngkirTab, chatbot: loadFaqTab,
     testimoni: loadTestimoniTab, laporan: loadLaporanTab, pengaturan: loadPengaturanTab
   }
@@ -137,7 +145,14 @@ function closeModal() {
 }
 window.closeModal = closeModal // dipakai tombol batal di beberapa form
 
-// ── STAFF BADGE & GANTI PASSWORD ────────────────────────────────
+// ── STAFF BADGE, GANTI PASSWORD & FILTER MENU PER ROLE ─────────
+
+function applyRoleMenu(role) {
+  document.querySelectorAll('.sidebar-btn[data-roles]').forEach(btn => {
+    const allowed = btn.dataset.roles.split(',')
+    if (!allowed.includes(role)) btn.classList.add('hidden')
+  })
+}
 
 function renderStaffBadge() {
   const el = document.getElementById('staff-badge')
@@ -1200,5 +1215,173 @@ async function exportLaporan(tipe) {
   } finally {
     btn.disabled = false
     btn.textContent = teksAsli
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// TAB: LIVE CHAT (CS ↔ Pengunjung, realtime dua arah)
+// ══════════════════════════════════════════════════════════
+
+let percakapanAktifId = null
+let percakapanCache   = []
+
+async function loadLiveChatTab() {
+  document.getElementById('filter-status-livechat').addEventListener('change', renderDaftarPercakapan)
+  document.getElementById('livechat-status').addEventListener('change', ubahStatusPercakapanAktif)
+  document.getElementById('form-livechat-reply').addEventListener('submit', kirimBalasanCS)
+
+  await renderDaftarPercakapan()
+  await perbaruiBadgeLivechat()
+  mulaiRealtimeChatJikaBelum()
+}
+
+function mulaiRealtimeChatJikaBelum() {
+  if (unsubChatRealtime) return
+  unsubChatRealtime = subscribeSemuaPercakapan(async () => {
+    await perbaruiBadgeLivechat()
+    // Refresh list & (kalau sedang dibuka) thread aktif supaya realtime terasa "hidup"
+    if (loadedTabs.has('livechat')) await renderDaftarPercakapan()
+    if (percakapanAktifId) await renderThreadPercakapan(percakapanAktifId, { scrollBottom: true })
+  })
+}
+
+async function perbaruiBadgeLivechat() {
+  try {
+    const jumlah = await hitungPesanBelumDibaca()
+    const badge = document.getElementById('badge-livechat')
+    if (jumlah > 0) {
+      badge.textContent = jumlah > 99 ? '99+' : jumlah
+      badge.classList.remove('hidden')
+    } else {
+      badge.classList.add('hidden')
+    }
+  } catch (e) {
+    console.error('Gagal memuat jumlah pesan belum dibaca:', e)
+  }
+}
+
+async function renderDaftarPercakapan() {
+  const status = document.getElementById('filter-status-livechat').value || undefined
+  const listEl = document.getElementById('list-percakapan')
+
+  try {
+    percakapanCache = await getPercakapanCS({ status })
+  } catch (e) {
+    listEl.innerHTML = `<p class="text-xs text-red-500 p-4">Gagal memuat percakapan</p>`
+    return
+  }
+
+  if (!percakapanCache.length) {
+    listEl.innerHTML = `<p class="text-xs text-charcoal-400 p-4 text-center">Belum ada percakapan</p>`
+    return
+  }
+
+  const STATUS_DOT = { terbuka: 'bg-red-500', ditangani: 'bg-amber-500', selesai: 'bg-charcoal-300 dark:bg-charcoal-600' }
+
+  listEl.innerHTML = percakapanCache.map(p => `
+    <button class="btn-percakapan w-full text-left p-3 hover:bg-charcoal-50 dark:hover:bg-charcoal-800 transition ${p.id === percakapanAktifId ? 'bg-wood-50 dark:bg-wood-900/20' : ''}"
+      data-id="${p.id}">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full flex-shrink-0 ${STATUS_DOT[p.status] || 'bg-charcoal-300'}"></span>
+        <p class="text-sm font-medium truncate flex-1">${escapeHtml(p.nama_pembeli)}</p>
+      </div>
+      <p class="text-[11px] text-charcoal-400 mt-1">${formatDatetime(p.last_message_at)}</p>
+    </button>
+  `).join('')
+
+  listEl.querySelectorAll('.btn-percakapan').forEach(btn =>
+    btn.addEventListener('click', () => bukaPercakapan(btn.dataset.id))
+  )
+}
+
+async function bukaPercakapan(id) {
+  percakapanAktifId = id
+  document.getElementById('livechat-empty').classList.add('hidden')
+  document.getElementById('livechat-thread').classList.remove('hidden')
+
+  document.querySelectorAll('.btn-percakapan').forEach(b =>
+    b.classList.toggle('bg-wood-50', b.dataset.id === id)
+  )
+
+  const p = percakapanCache.find(x => x.id === id)
+  if (p) {
+    document.getElementById('livechat-nama').textContent = p.nama_pembeli
+    document.getElementById('livechat-wa').textContent = p.nomor_wa || '—'
+    document.getElementById('livechat-status').value = p.status
+  }
+
+  await renderThreadPercakapan(id, { scrollBottom: true })
+
+  try {
+    await tandaiPesanDibacaCS(id)
+    await perbaruiBadgeLivechat()
+  } catch (e) {
+    console.error('Gagal menandai pesan terbaca:', e)
+  }
+}
+
+async function renderThreadPercakapan(id, { scrollBottom = false } = {}) {
+  if (id !== percakapanAktifId) return
+  const messagesEl = document.getElementById('livechat-messages')
+
+  let pesan = []
+  try {
+    pesan = await getPesanPercakapan(id)
+  } catch (e) {
+    messagesEl.innerHTML = `<p class="text-xs text-red-500">Gagal memuat pesan</p>`
+    return
+  }
+
+  messagesEl.innerHTML = pesan.map(m => `
+    <div class="flex flex-col ${m.pengirim === 'cs' ? 'items-end' : 'items-start'}">
+      <div class="max-w-[75%] rounded-2xl px-3 py-2 text-sm ${
+        m.pengirim === 'cs'
+          ? 'bg-wood-600 text-white rounded-tr-none'
+          : 'bg-charcoal-100 dark:bg-charcoal-700 rounded-tl-none'
+      }">${escapeHtml(m.isi)}</div>
+      <span class="text-[10px] text-charcoal-400 mt-0.5">${m.pengirim === 'cs' ? (m.pengirim_nama || 'CS') : m.pengirim_nama} · ${formatDatetime(m.created_at)}</span>
+    </div>
+  `).join('')
+
+  if (scrollBottom) messagesEl.scrollTop = messagesEl.scrollHeight
+}
+
+async function kirimBalasanCS(e) {
+  e.preventDefault()
+  if (!percakapanAktifId) return
+
+  const input = document.getElementById('livechat-input')
+  const isi = input.value.trim()
+  if (!isi) return
+
+  input.value = ''
+  input.disabled = true
+
+  try {
+    await kirimPesanCS(percakapanAktifId, isi, currentUser.profile.nama_lengkap)
+    // Kalau masih 'terbuka', otomatis pindah ke 'ditangani' saat CS pertama kali membalas
+    const p = percakapanCache.find(x => x.id === percakapanAktifId)
+    if (p && p.status === 'terbuka') {
+      await updateStatusPercakapan(percakapanAktifId, 'ditangani', currentUser.user.id)
+      document.getElementById('livechat-status').value = 'ditangani'
+    }
+    await renderThreadPercakapan(percakapanAktifId, { scrollBottom: true })
+  } catch (err) {
+    toast('Gagal mengirim balasan: ' + err.message, 'error')
+  } finally {
+    input.disabled = false
+    input.focus()
+  }
+}
+
+async function ubahStatusPercakapanAktif(e) {
+  if (!percakapanAktifId) return
+  const status = e.target.value
+  try {
+    await updateStatusPercakapan(percakapanAktifId, status, currentUser.user.id)
+    toast('Status percakapan diperbarui')
+    await renderDaftarPercakapan()
+  } catch (err) {
+    toast('Gagal mengubah status: ' + err.message, 'error')
   }
 }

@@ -484,3 +484,137 @@ export async function getOrdersExport({ dari, sampai, status } = {}) {
   if (error) throw error
   return data
 }
+
+// ══════════════════════════════════════════════════════════
+// LIVE CHAT (CS ↔ Pengunjung, realtime)
+// ══════════════════════════════════════════════════════════
+
+/** [Publik] Buat percakapan baru */
+export async function buatPercakapan({ visitor_token, nama_pembeli, nomor_wa = null }) {
+  const { data, error } = await supabase
+    .from('chat_conversations')
+    .insert({ visitor_token, nama_pembeli, nomor_wa })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+/** [Publik] Ambil percakapan terbaru milik visitor_token tertentu (null kalau belum pernah chat) */
+export async function getPercakapanByToken(visitor_token) {
+  const { data, error } = await supabase
+    .from('chat_conversations')
+    .select('*')
+    .eq('visitor_token', visitor_token)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+/** [Publik & CS] Ambil semua pesan dalam satu percakapan, urut lama→baru */
+export async function getPesanPercakapan(conversation_id) {
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .select('*')
+    .eq('conversation_id', conversation_id)
+    .order('created_at', { ascending: true })
+  if (error) throw error
+  return data
+}
+
+/** [Publik] Kirim pesan sebagai pembeli */
+export async function kirimPesanPembeli(conversation_id, isi, pengirim_nama = 'Pengunjung') {
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .insert({ conversation_id, pengirim: 'pembeli', pengirim_nama, isi })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+/** [CS/Admin] Kirim pesan balasan sebagai staff */
+export async function kirimPesanCS(conversation_id, isi, pengirim_nama) {
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .insert({ conversation_id, pengirim: 'cs', pengirim_nama, isi })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+/** [CS/Admin] Daftar semua percakapan, terbaru dulu */
+export async function getPercakapanCS({ status } = {}) {
+  let q = supabase
+    .from('chat_conversations')
+    .select('*, staff:assigned_to(nama_lengkap, username)')
+    .order('last_message_at', { ascending: false })
+
+  if (status) q = q.eq('status', status)
+
+  const { data, error } = await q
+  if (error) throw error
+  return data
+}
+
+/** [CS/Admin] Update status percakapan (terbuka / ditangani / selesai) & opsional ambil-alih (assign) */
+export async function updateStatusPercakapan(id, status, assigned_to = undefined) {
+  const payload = { status }
+  if (assigned_to !== undefined) payload.assigned_to = assigned_to
+
+  const { data, error } = await supabase
+    .from('chat_conversations')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+/** [CS/Admin] Tandai semua pesan dari pembeli di percakapan ini sudah dibaca */
+export async function tandaiPesanDibacaCS(conversation_id) {
+  const { error } = await supabase
+    .from('chat_messages')
+    .update({ dibaca_cs: true })
+    .eq('conversation_id', conversation_id)
+    .eq('pengirim', 'pembeli')
+    .eq('dibaca_cs', false)
+  if (error) throw error
+}
+
+/** Hitung jumlah pesan pembeli yang belum dibaca CS, per percakapan (dipakai badge sidebar) */
+export async function hitungPesanBelumDibaca() {
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .select('conversation_id', { count: 'exact', head: false })
+    .eq('pengirim', 'pembeli')
+    .eq('dibaca_cs', false)
+  if (error) throw error
+  return data.length
+}
+
+/** Subscribe realtime ke pesan baru pada satu percakapan (dipakai widget pembeli & dashboard CS) */
+export function subscribePesanBaru(conversation_id, onInsert) {
+  const channel = supabase
+    .channel(`chat-messages-${conversation_id}`)
+    .on('postgres_changes', {
+      event: 'INSERT', schema: 'public', table: 'chat_messages',
+      filter: `conversation_id=eq.${conversation_id}`
+    }, (payload) => onInsert(payload.new))
+    .subscribe()
+  return () => supabase.removeChannel(channel)
+}
+
+/** Subscribe realtime ke SEMUA percakapan (dipakai dashboard CS untuk badge & list) */
+export function subscribeSemuaPercakapan(onChange) {
+  const channel = supabase
+    .channel('chat-conversations-all')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_conversations' }, onChange)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, onChange)
+    .subscribe()
+  return () => supabase.removeChannel(channel)
+}
