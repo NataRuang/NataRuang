@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
-  <title>Login Admin — NataRuang</title>
+  <title>Login Staff — NataRuang</title>
   <link rel="icon" href="/icons/favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,7 +21,7 @@
         <span class="text-wood-600">Nata</span>
         <span class="text-charcoal-900 dark:text-white">Ruang</span>
       </a>
-      <p class="text-charcoal-500 dark:text-charcoal-400 text-sm mt-1">Panel Administrator</p>
+      <p class="text-charcoal-500 dark:text-charcoal-400 text-sm mt-1">Panel Staff — Admin · CS · Finance</p>
     </div>
 
     <!-- Card form -->
@@ -35,11 +35,12 @@
         <div class="space-y-4">
 
           <div>
-            <label for="email" class="block text-sm font-medium mb-1.5">Email</label>
-            <input id="email" type="email" name="email" autocomplete="email"
-              placeholder="admin@example.com" required
+            <label for="username" class="block text-sm font-medium mb-1.5">Username</label>
+            <input id="username" type="text" name="username" autocomplete="username"
+              placeholder="username" required minlength="3" pattern="[a-z0-9_.]{3,32}"
+              autocapitalize="off" autocorrect="off" spellcheck="false"
               class="input-field w-full">
-            <p class="text-red-500 text-xs mt-1 hidden" id="err-email">Email tidak valid</p>
+            <p class="text-red-500 text-xs mt-1 hidden" id="err-username">Username minimal 3 karakter</p>
           </div>
 
           <div>

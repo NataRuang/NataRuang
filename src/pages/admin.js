@@ -2,7 +2,7 @@
 // Logika Dashboard Admin NataRuang — CRUD produk, kategori, pesanan,
 // pembayaran, ongkir, chatbot FAQ, testimoni, laporan, pengaturan.
 
-import { requireAdmin, logoutAdmin } from '@/lib/auth.js'
+import { requireAdmin, logoutStaff, changeMyPassword, ROLE_LABELS } from '@/lib/auth.js'
 import {
   getSettings, updateSetting,
   getCategories, upsertCategory, deleteCategory,
@@ -24,9 +24,13 @@ import { prosesGambarProduk } from '@/lib/watermark.js'
 import { exportOrdersExcel, exportOrdersPDF, cetakNotaPesanan } from '@/lib/report.js'
 
 let settingsCache = {}
-let currentUser   = null
+let currentUser   = null   // { user, profile }
 
-// ── Guard: wajib login ───────────────────────────────────────
+// ── Guard: wajib login sebagai Admin ───────────────────────────
+// Catatan: dashboard ini untuk sementara khusus role 'admin'.
+// Dashboard khusus CS & Finance menyusul di tahap berikutnya —
+// akun CS/Finance yang login akan diarahkan kembali ke halaman login
+// dengan pesan "akses ditolak" sampai dashboard mereka siap.
 ;(async function bootstrap() {
   currentUser = await requireAdmin()
   if (!currentUser) return // sudah di-redirect ke login.html oleh requireAdmin()
@@ -37,10 +41,14 @@ async function init() {
   initDarkMode()
   document.getElementById('btn-darkmode').addEventListener('click', toggleDarkMode)
 
+  renderStaffBadge()
+
   document.getElementById('btn-logout').addEventListener('click', async () => {
-    await logoutAdmin()
+    await logoutStaff()
     window.location.replace('/login.html')
   })
+
+  document.getElementById('btn-ganti-password').addEventListener('click', bukaFormGantiPassword)
 
   document.getElementById('btn-sidebar-toggle').addEventListener('click', () => {
     document.getElementById('sidebar').classList.toggle('-translate-x-full')
@@ -128,6 +136,64 @@ function closeModal() {
   document.getElementById('modal-body').innerHTML = ''
 }
 window.closeModal = closeModal // dipakai tombol batal di beberapa form
+
+// ── STAFF BADGE & GANTI PASSWORD ────────────────────────────────
+
+function renderStaffBadge() {
+  const el = document.getElementById('staff-badge')
+  if (!el || !currentUser) return
+  const { nama_lengkap, role } = currentUser.profile
+  el.textContent = `${nama_lengkap} · ${ROLE_LABELS[role] || role}`
+}
+
+function bukaFormGantiPassword() {
+  openModal('Ganti Password', `
+    <form id="form-ganti-password" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium mb-1.5">Password Lama</label>
+        <input type="password" id="gp-lama" required minlength="6" class="input-field w-full">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1.5">Password Baru</label>
+        <input type="password" id="gp-baru" required minlength="6" class="input-field w-full">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1.5">Ulangi Password Baru</label>
+        <input type="password" id="gp-ulang" required minlength="6" class="input-field w-full">
+      </div>
+      <p id="gp-error" class="text-red-500 text-xs hidden"></p>
+      <div class="flex gap-3 pt-2">
+        <button type="button" onclick="closeModal()" class="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-charcoal-200 dark:border-charcoal-700">Batal</button>
+        <button type="submit" class="flex-1 btn-primary py-2.5 rounded-xl text-sm font-semibold">Simpan</button>
+      </div>
+    </form>
+  `)
+
+  document.getElementById('form-ganti-password').addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const errEl  = document.getElementById('gp-error')
+    const lama   = document.getElementById('gp-lama').value
+    const baru   = document.getElementById('gp-baru').value
+    const ulang  = document.getElementById('gp-ulang').value
+
+    errEl.classList.add('hidden')
+
+    if (baru !== ulang) {
+      errEl.textContent = 'Password baru dan ulangi password tidak sama'
+      errEl.classList.remove('hidden')
+      return
+    }
+
+    try {
+      await changeMyPassword(currentUser.profile.username, lama, baru)
+      closeModal()
+      toast('Password berhasil diubah')
+    } catch (err) {
+      errEl.textContent = err.message || 'Gagal mengubah password'
+      errEl.classList.remove('hidden')
+    }
+  })
+}
 
 // ── DASHBOARD ────────────────────────────────────────────────
 

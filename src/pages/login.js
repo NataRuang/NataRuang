@@ -1,21 +1,30 @@
 // src/pages/login.js
-import { loginAdmin, getSession } from '@/lib/auth.js'
+import { loginStaff, getSession } from '@/lib/auth.js'
 import { initDarkMode } from '@/lib/utils.js'
 
 initDarkMode()
+
+const form        = document.getElementById('form-login')
+const alertEl     = document.getElementById('alert-error')
+const btnSubmit   = document.getElementById('btn-submit')
+const btnLabel    = document.getElementById('btn-label')
+const spinner     = document.getElementById('spinner')
+const pwInput     = document.getElementById('password')
+const usernameInput = document.getElementById('username')
 
 // Redirect jika sudah login
 getSession().then(session => {
   if (session) window.location.replace('/admin.html')
 })
 
-const form      = document.getElementById('form-login')
-const alertEl   = document.getElementById('alert-error')
-const btnSubmit = document.getElementById('btn-submit')
-const btnLabel  = document.getElementById('btn-label')
-const spinner   = document.getElementById('spinner')
-const pwInput   = document.getElementById('password')
-const emailInput = document.getElementById('email')
+// Tampilkan pesan kalau datang dari redirect requireRole()
+const params = new URLSearchParams(window.location.search)
+const alasan = params.get('alasan')
+if (alasan === 'akses-ditolak') {
+  showError('Akun Anda tidak memiliki akses ke halaman tersebut.')
+} else if (alasan === 'nonaktif') {
+  showError('Akun Anda sudah dinonaktifkan. Hubungi Admin.')
+}
 
 // Toggle password visibility
 document.getElementById('btn-show-pw').addEventListener('click', () => {
@@ -44,15 +53,15 @@ function resetAttempts() { sessionStorage.removeItem(RL_KEY) }
 // Validasi form
 function validate() {
   let ok = true
-  const email = emailInput.value.trim()
-  const pw    = pwInput.value
+  const username = usernameInput.value.trim()
+  const pw = pwInput.value
 
-  const errEmail = document.getElementById('err-email')
-  const errPw    = document.getElementById('err-password')
+  const errUsername = document.getElementById('err-username')
+  const errPw = document.getElementById('err-password')
 
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    errEmail.classList.remove('hidden'); ok = false
-  } else errEmail.classList.add('hidden')
+  if (!username || username.length < 3) {
+    errUsername.classList.remove('hidden'); ok = false
+  } else errUsername.classList.add('hidden')
 
   if (pw.length < 6) {
     errPw.classList.remove('hidden'); ok = false
@@ -88,18 +97,11 @@ form.addEventListener('submit', async (e) => {
   recordAttempt()
 
   try {
-    await loginAdmin(emailInput.value.trim(), pwInput.value)
+    await loginStaff(usernameInput.value.trim(), pwInput.value)
     resetAttempts()
     window.location.replace('/admin.html')
   } catch (err) {
     setLoading(false)
-    const msg = err.message?.toLowerCase() || ''
-    if (msg.includes('invalid') || msg.includes('credentials')) {
-      showError('Email atau password salah.')
-    } else if (msg.includes('too many')) {
-      showError('Terlalu banyak percobaan. Silakan tunggu beberapa menit.')
-    } else {
-      showError('Gagal login: ' + (err.message || 'Kesalahan tidak diketahui'))
-    }
+    showError(err.message || 'Gagal login: kesalahan tidak diketahui')
   }
 })

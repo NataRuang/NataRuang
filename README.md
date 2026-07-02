@@ -62,18 +62,36 @@ npm run dev
 
 1. Buat project baru di [supabase.com](https://supabase.com)
 2. Buka **SQL Editor**
-3. Salin seluruh isi `database/schema.sql`
-4. Klik **Run**
+3. Salin seluruh isi `database/schema.sql` → **Run**
+4. Salin seluruh isi `database/002_staff_roles.sql` → **Run**
+   (migration ini menambahkan sistem akun staff multi-role: Admin / CS / Finance)
 
-### Buat akun admin
-Di Supabase Dashboard → **Authentication** → **Users** → **Add user**
+### Buat akun staff (Admin / CS / Finance)
+Login staff memakai **username**, bukan email — tapi Supabase Auth tetap butuh
+format email di baliknya. Karena project ini murni JAMstack (tanpa backend),
+pembuatan akun dilakukan manual lewat Dashboard:
 
-Setelah user dibuat, jalankan SQL berikut untuk set role admin:
-```sql
-UPDATE auth.users
-SET raw_app_meta_data = raw_app_meta_data || '{"role":"admin"}'::jsonb
-WHERE email = 'admin@youremail.com';
-```
+1. Supabase Dashboard → **Authentication** → **Users** → **Add user**
+   - Email: `<username>@staff.nataruang.internal` (ganti `<username>` sesuai keinginan, huruf kecil, tanpa spasi)
+   - Password: tentukan password awal
+   - **Auto Confirm User**: wajib dicentang
+
+2. Salin **User UID** yang baru dibuat, lalu jalankan di SQL Editor:
+   ```sql
+   INSERT INTO staff_profiles (id, username, nama_lengkap, role)
+   VALUES ('TEMPEL-UUID-DI-SINI', 'budi', 'Budi Santoso', 'admin');
+   -- role hanya boleh: 'admin' | 'cs' | 'finance'
+   ```
+
+3. Staff login di `/login.html` memakai **username** (`budi`) dan password dari
+   langkah 1. Setelah login, password bisa diganti sendiri lewat tombol
+   **Ganti Password** di dashboard — tidak perlu lewat Supabase Dashboard lagi.
+
+> Catatan tahap saat ini: dashboard penuh (`admin.html`) baru aktif untuk role
+> **Admin**. Dashboard khusus **CS** (live chat) dan **Finance** (laporan)
+> menyusul di tahap pengembangan berikutnya — akun CS/Finance sudah bisa
+> dibuat & login, tapi untuk sementara akan diarahkan kembali ke halaman
+> login sampai dashboard masing-masing selesai dibangun.
 
 ### Setup Storage
 Di Supabase Dashboard → **Storage** → buat dua bucket:
@@ -108,7 +126,7 @@ git push -u origin main
 > `.gitignore` sudah mengecualikan `node_modules/`, `dist/`, dan `.env` — pastikan tidak pernah meng-commit file `.env` yang berisi kredensial.
 
 ### 2. Setup Supabase
-Ikuti bagian **🗄 Setup Database (Supabase)** di bawah untuk membuat project, menjalankan `database/schema.sql`, membuat akun admin, dan mengatur Storage bucket.
+Ikuti bagian **🗄 Setup Database (Supabase)** di bawah untuk membuat project, menjalankan `database/schema.sql` + `database/002_staff_roles.sql`, membuat akun staff, dan mengatur Storage bucket.
 
 ### 3. Deploy ke Vercel
 **Via Vercel Dashboard (disarankan):**
@@ -157,11 +175,13 @@ netlify deploy --prod
 
 ---
 
-## 🔑 Login Admin
+## 🔑 Login Staff (Admin / CS / Finance)
 
-Buka `https://nataruang.vercel.app/login.html`
+Buka `https://nataruang.vercel.app/login.html` (atau link **Staff Login** di footer situs)
 
-Gunakan email dan password yang didaftarkan di Supabase Auth.
+Gunakan **username** (bukan email) dan password akun staff — lihat bagian
+**Buat akun staff** di atas untuk cara membuatnya. Password bisa diganti
+sendiri lewat tombol **Ganti Password** setelah login.
 
 ---
 
@@ -239,7 +259,8 @@ nataruang/
 ├── .env.example
 ├── .gitignore
 ├── database/
-│   └── schema.sql          # Seluruh SQL (tabel, trigger, RLS, view, rating)
+│   ├── schema.sql          # Seluruh SQL (tabel, trigger, RLS, view, rating)
+│   └── 002_staff_roles.sql # Migration: akun staff Admin/CS/Finance (login username)
 ├── public/
 │   ├── images/
 │   ├── icons/
