@@ -27,15 +27,20 @@ export async function loginStaff(username, password) {
   const email = usernameToEmail(username)
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
   if (error) {
-    // Sembunyikan detail teknis Supabase, tampilkan pesan yang aman & jelas
-    throw new Error('Username atau password salah')
+    // Pesan diperjelas untuk beberapa penyebab umum, supaya gampang didiagnosis
+    // tanpa membuka Supabase Dashboard. Ini portal staff internal (bukan
+    // customer-facing), jadi detail secukupnya di sini masih aman.
+    if (error.message.toLowerCase().includes('email not confirmed')) {
+      throw new Error('Akun belum dikonfirmasi. Saat membuat user di Supabase Dashboard, centang "Auto Confirm User".')
+    }
+    throw new Error('Username atau password salah. Pastikan password yang diisi adalah PASSWORD AKUN (bukan alamat email internal).')
   }
 
   // Pastikan akun punya profil staff aktif; kalau tidak, tolak & logout paksa
   const profile = await getMyProfile()
   if (!profile || !profile.aktif) {
     await supabase.auth.signOut()
-    throw new Error('Akun tidak ditemukan atau sudah dinonaktifkan. Hubungi Admin.')
+    throw new Error('Login Auth berhasil tapi profil staff tidak ditemukan. Kemungkinan UUID di staff_profiles tidak sama dengan UUID user ini di auth.users — cek & perbaiki di SQL Editor.')
   }
 
   return { session: data.session, profile }

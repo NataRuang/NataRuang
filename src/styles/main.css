@@ -125,6 +125,18 @@
     @apply bg-charcoal-900 dark:bg-white text-white dark:text-charcoal-900;
   }
 
+  /* ── Laporan sub-tab pills ── */
+  .lap-subtab-btn {
+    @apply px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap flex-shrink-0
+           text-charcoal-500 dark:text-charcoal-400 bg-white dark:bg-charcoal-900
+           border border-charcoal-200 dark:border-charcoal-700
+           hover:text-wood-600 transition cursor-pointer;
+  }
+
+  .lap-subtab-btn.active {
+    @apply bg-wood-600 border-wood-600 text-white hover:text-white;
+  }
+
   /* ── Navbar link ── */
   .nav-link {
     @apply text-charcoal-600 dark:text-charcoal-300

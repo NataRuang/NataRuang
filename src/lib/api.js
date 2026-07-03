@@ -618,3 +618,203 @@ export function subscribeSemuaPercakapan(onChange) {
     .subscribe()
   return () => supabase.removeChannel(channel)
 }
+
+// ══════════════════════════════════════════════════════════
+// AKUNTANSI (Bagan Akun, Jurnal Umum, Buku Besar, Neraca, Laba Rugi)
+// ══════════════════════════════════════════════════════════
+
+/** [Finance/Admin] Daftar Bagan Akun (Chart of Accounts) */
+export async function getBaganAkun({ hanyaAktif = true } = {}) {
+  let q = supabase.from('akun_akuntansi').select('*').order('kode_akun')
+  if (hanyaAktif) q = q.eq('aktif', true)
+  const { data, error } = await q
+  if (error) throw error
+  return data
+}
+
+/** [Finance/Admin] Tambah/ubah satu akun */
+export async function upsertAkun(akun) {
+  const { data, error } = await supabase
+    .from('akun_akuntansi')
+    .upsert(akun)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+/** [Finance/Admin] Daftar entri jurnal umum (header saja), dengan total debit/kredit per entri */
+export async function getJurnalEntries({ dari, sampai, page = 1, perPage = 25 } = {}) {
+  let q = supabase
+    .from('jurnal_entries')
+    .select('*, jurnal_detail(debit, kredit)', { count: 'exact' })
+    .order('tanggal', { ascending: false })
+    .order('created_at', { ascending: false })
+
+  if (dari)   q = q.gte('tanggal', dari)
+  if (sampai) q = q.lte('tanggal', sampai)
+
+  const from = (page - 1) * perPage
+  const { data, error, count } = await q.range(from, from + perPage - 1)
+  if (error) throw error
+
+  const rows = data.map(j => ({
+    ...j,
+    total_debit: j.jurnal_detail.reduce((s, d) => s + Number(d.debit), 0),
+    total_kredit: j.jurnal_detail.reduce((s, d) => s + Number(d.kredit), 0),
+  }))
+
+  return { rows, count, page, perPage, totalPages: Math.ceil(count / perPage) }
+}
+
+/** [Finance/Admin] Detail baris satu jurnal (join nama akun) */
+export async function getJurnalDetail(jurnalId) {
+  const { data, error } = await supabase
+    .from('jurnal_detail')
+    .select('*, akun:akun_id(kode_akun, nama_akun)')
+    .eq('jurnal_id', jurnalId)
+  if (error) throw error
+  return data
+}
+
+/**
+ * [Finance/Admin] Buat jurnal manual. baris = [{ akun_id, debit, kredit, keterangan }, ...]
+ * Total debit HARUS sama dengan total kredit — divalidasi di database (buat_jurnal()).
+ */
+export async function buatJurnalManual({ tanggal, keterangan, baris }) {
+  const { data, error } = await supabase.rpc('buat_jurnal', {
+    p_tanggal: tanggal,
+    p_keterangan: keterangan,
+    p_sumber: 'manual',
+    p_referensi_tabel: null,
+    p_referensi_id: null,
+    p_baris: baris,
+  })
+  if (error) throw new Error(error.message.replace(/^.*:\s*/, ''))
+  return data
+}
+
+/** [Admin] Hapus jurnal (koreksi) — hanya admin */
+export async function hapusJurnal(jurnalId) {
+  const { error } = await supabase.from('jurnal_entries').delete().eq('id', jurnalId)
+  if (error) throw error
+}
+
+/** [Finance/Admin] Buku Besar satu akun pada rentang tanggal (dengan saldo berjalan) */
+export async function getBukuBesar(akunId, { dari, sampai } = {}) {
+  const { data, error } = await supabase.rpc('get_buku_besar', {
+    p_akun_id: akunId, p_dari: dari || null, p_sampai: sampai || null,
+  })
+  if (error) throw error
+  return data
+}
+
+/** [Finance/Admin] Neraca (posisi keuangan) per tanggal tertentu */
+export async function getNeraca(perTanggal) {
+  const { data, error } = await supabase.rpc('get_neraca', { p_per_tanggal: perTanggal || new Date().toISOString().slice(0, 10) })
+  if (error) throw error
+  return data
+}
+
+/** [Finance/Admin] Laba Rugi pada rentang tanggal */
+export async function getLabaRugi(dari, sampai) {
+  const { data, error } = await supabase.rpc('get_laba_rugi', { p_dari: dari, p_sampai: sampai })
+  if (error) throw error
+  return data
+}
+
+// ══════════════════════════════════════════════════════════
+// INVENTARIS / STOK (gudang, kartu stok, retur, barang rusak)
+// ══════════════════════════════════════════════════════════
+
+/** [Finance/Admin] Daftar gudang */
+export async function getGudang() {
+  const { data, error } = await supabase.from('gudang').select('*').order('kode_gudang')
+  if (error) throw error
+  return data
+}
+
+/** [Admin] Tambah/ubah gudang */
+export async function upsertGudang(gudang) {
+  const { data, error } = await supabase.from('gudang').upsert(gudang).select().single()
+  if (error) throw error
+  return data
+}
+
+/** [Finance/Admin] Stok per lokasi untuk satu produk */
+export async function getStokLokasi(productId) {
+  const { data, error } = await supabase
+    .from('stok_lokasi')
+    .select('*, gudang:gudang_id(kode_gudang, nama_gudang)')
+    .eq('product_id', productId)
+  if (error) throw error
+  return data
+}
+
+/**
+ * [Finance/Admin] Catat pergerakan stok baru.
+ * tipe: 'masuk_pembelian' | 'masuk_penyesuaian' | 'retur_masuk_pembeli' |
+ *       'keluar_penjualan' | 'keluar_penyesuaian' | 'retur_keluar_supplier' | 'rusak_hilang'
+ * Untuk 'rusak_hilang', hasilnya berstatus 'menunggu_approval' (belum mengubah stok).
+ */
+export async function catatPergerakanStok({
+  productId, gudangId, tipe, qty, hargaSatuan = null, keterangan = null,
+  referensiTabel = null, referensiId = null,
+}) {
+  const { data, error } = await supabase.rpc('proses_pergerakan_stok', {
+    p_product_id: productId,
+    p_gudang_id: gudangId,
+    p_tipe: tipe,
+    p_qty: qty,
+    p_harga_satuan: hargaSatuan,
+    p_keterangan: keterangan,
+    p_referensi_tabel: referensiTabel,
+    p_referensi_id: referensiId,
+  })
+  if (error) throw new Error(error.message.replace(/^.*:\s*/, ''))
+  return data
+}
+
+/** [Finance/Admin] Setujui atau tolak pergerakan stok yang menunggu approval (barang rusak/hilang) */
+export async function setujuiPergerakanStok(movementId, setuju, catatan = null) {
+  const { error } = await supabase.rpc('setujui_pergerakan_stok', {
+    p_movement_id: movementId, p_setuju: setuju, p_catatan: catatan,
+  })
+  if (error) throw new Error(error.message.replace(/^.*:\s*/, ''))
+}
+
+/** [Finance/Admin] Daftar pergerakan yang MENUNGGU approval (barang rusak/hilang) */
+export async function getPergerakanMenungguApproval() {
+  const { data, error } = await supabase
+    .from('v_kartu_stok')
+    .select('*')
+    .eq('status', 'menunggu_approval')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+/** [Finance/Admin] Kartu stok (riwayat pergerakan), filter opsional per produk & gudang */
+export async function getKartuStok({ productId, gudangId, page = 1, perPage = 25 } = {}) {
+  let q = supabase.from('v_kartu_stok').select('*', { count: 'exact' }).order('created_at', { ascending: false })
+  if (productId) q = q.eq('product_id', productId)
+  if (gudangId)  q = q.eq('gudang_id', gudangId)
+
+  const from = (page - 1) * perPage
+  const { data, error, count } = await q.range(from, from + perPage - 1)
+  if (error) throw error
+  return { rows: data, count, page, perPage, totalPages: Math.ceil(count / perPage) }
+}
+
+/** [Finance/Admin] Daftar ringkas semua produk aktif (utk dropdown & ringkasan stok) */
+export async function getProductsRingkas({ search } = {}) {
+  let q = supabase
+    .from('products')
+    .select('id, kode_produk, nama, stok')
+    .is('deleted_at', null)
+    .order('nama')
+  if (search) q = q.ilike('nama', `%${search}%`)
+  const { data, error } = await q
+  if (error) throw error
+  return data
+}
