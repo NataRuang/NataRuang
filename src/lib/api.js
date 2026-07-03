@@ -818,3 +818,15 @@ export async function getProductsRingkas({ search } = {}) {
   if (error) throw error
   return data
 }
+
+/** Upload file umum non-produk (mis. gambar QRIS pembayaran) ke bucket product-images */
+export async function uploadFileUmum(file, folder = 'pengaturan') {
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+  const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+  const { error } = await supabase.storage
+    .from('product-images')
+    .upload(fileName, file, { contentType: file.type, upsert: false })
+  if (error) throw error
+  const { data } = supabase.storage.from('product-images').getPublicUrl(fileName)
+  return data.publicUrl
+}

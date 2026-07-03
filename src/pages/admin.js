@@ -8,7 +8,7 @@ import {
   getCategories, upsertCategory, deleteCategory,
   getProducts, getProductById, upsertProduct, deleteProduct,
   getProductsRingkas,
-  uploadFotoProduk, insertProductImage, deleteProductImage,
+  uploadFotoProduk, uploadFileUmum, insertProductImage, deleteProductImage,
   getAllShippingRates, upsertShippingRate, deleteShippingRate,
   getOrders, updateOrderStatus,
   getPaymentsPending, verifyPayment,
@@ -1128,34 +1128,94 @@ async function loadPengaturanTab() {
   await renderSettingsForm()
 }
 
-const SETTINGS_LABELS = {
-  nama_toko: 'Nama Toko', tagline: 'Tagline', alamat: 'Alamat Toko', nomor_wa: 'Nomor WhatsApp (628xxx)',
-  email: 'Email Toko', jam_operasional: 'Jam Operasional', instagram: 'Instagram (tanpa @)',
-  facebook: 'URL Facebook', tiktok: 'TikTok (tanpa @)', bank_nama: 'Nama Bank', bank_rekening: 'Nomor Rekening',
-  bank_atas_nama: 'Atas Nama Rekening', qris_url: 'URL Gambar QRIS', logo_url: 'URL Logo',
-  watermark_text: 'Teks Watermark Foto', watermark_opacity: 'Opasitas Watermark (0–1)', maps_embed: 'Embed URL Google Maps'
-}
+const SETTINGS_SECTIONS = [
+  {
+    judul: 'Informasi Toko',
+    fields: {
+      nama_toko: 'Nama Toko', tagline: 'Tagline', alamat: 'Alamat Toko',
+      nomor_wa: 'Nomor WhatsApp (format 628xxx)', email: 'Email Toko', jam_operasional: 'Jam Operasional',
+    },
+  },
+  {
+    judul: 'Pembayaran (Rekening Bank & QRIS)',
+    fields: {
+      bank_nama: 'Nama Bank', bank_rekening: 'Nomor Rekening', bank_atas_nama: 'Atas Nama Rekening',
+    },
+  },
+  {
+    judul: 'Sosial Media',
+    fields: { instagram: 'Instagram (tanpa @)', facebook: 'URL Facebook', tiktok: 'TikTok (tanpa @)' },
+  },
+  {
+    judul: 'Lainnya',
+    fields: {
+      logo_url: 'URL Logo', watermark_text: 'Teks Watermark Foto', watermark_opacity: 'Opasitas Watermark (0–1)',
+      maps_embed: 'Embed URL Google Maps',
+    },
+  },
+]
 
 async function renderSettingsForm() {
   const container = document.getElementById('form-settings')
   try {
     settingsCache = await getSettings()
-    container.innerHTML = `
-      ${Object.keys(SETTINGS_LABELS).map(key => `
-        <div>
-          <label class="label text-xs">${SETTINGS_LABELS[key]}</label>
-          <input data-key="${key}" class="input-field setting-input" value="${escapeHtml(settingsCache[key] || '')}">
-        </div>`).join('')}
+
+    container.innerHTML = SETTINGS_SECTIONS.map(sec => `
+      <div class="mb-6">
+        <h3 class="font-semibold text-sm mb-3 text-charcoal-500 dark:text-charcoal-400">${sec.judul}</h3>
+        <div class="space-y-4">
+          ${Object.keys(sec.fields).map(key => `
+            <div>
+              <label class="label text-xs">${sec.fields[key]}</label>
+              <input data-key="${key}" class="input-field w-full setting-input" value="${escapeHtml(settingsCache[key] || '')}">
+            </div>`).join('')}
+        </div>
+      </div>`).join('') + `
+      <div class="mb-6">
+        <h3 class="font-semibold text-sm mb-3 text-charcoal-500 dark:text-charcoal-400">Gambar QRIS</h3>
+        <div class="flex items-start gap-4">
+          <div id="qris-preview-wrap" class="w-32 h-32 rounded-xl border border-charcoal-200 dark:border-charcoal-700 overflow-hidden flex items-center justify-center bg-charcoal-50 dark:bg-charcoal-800 flex-shrink-0">
+            ${settingsCache.qris_url
+              ? `<img id="qris-preview" src="${escapeHtml(settingsCache.qris_url)}" class="w-full h-full object-contain">`
+              : `<span class="text-[10px] text-charcoal-400 text-center px-2">Belum ada QRIS</span>`}
+          </div>
+          <div class="flex-1">
+            <input id="qris-file" type="file" accept="image/jpeg,image/png,image/webp" class="input-field w-full text-xs">
+            <p class="text-[11px] text-charcoal-400 mt-1.5">Upload foto/screenshot QRIS toko (JPG/PNG/WebP). Tampil otomatis di halaman pembayaran pembeli.</p>
+            <p id="qris-upload-status" class="text-xs mt-1 hidden"></p>
+          </div>
+        </div>
+        <input type="hidden" data-key="qris_url" id="qris-url-hidden" value="${escapeHtml(settingsCache.qris_url || '')}">
+      </div>
       <button id="btn-simpan-settings" class="btn-primary w-full py-2.5 rounded-xl text-sm mt-2">Simpan Semua Pengaturan</button>
       <p class="text-[11px] text-charcoal-400 text-center mt-2">Kredensial Supabase (URL &amp; anon key) diatur lewat file .env, bukan di sini, demi keamanan.</p>
     `
+
+    document.getElementById('qris-file').addEventListener('change', async (e) => {
+      const file = e.target.files[0]
+      if (!file) return
+      const statusEl = document.getElementById('qris-upload-status')
+      statusEl.textContent = 'Mengunggah...'
+      statusEl.classList.remove('hidden', 'text-red-500')
+      try {
+        const url = await uploadFileUmum(file, 'pengaturan')
+        document.getElementById('qris-url-hidden').value = url
+        document.getElementById('qris-preview-wrap').innerHTML = `<img id="qris-preview" src="${url}" class="w-full h-full object-contain">`
+        statusEl.textContent = 'Berhasil diunggah — klik "Simpan Semua Pengaturan" untuk menerapkan'
+        statusEl.classList.add('text-green-600')
+      } catch (err) {
+        statusEl.textContent = 'Gagal upload: ' + err.message
+        statusEl.classList.add('text-red-500')
+      }
+    })
+
     document.getElementById('btn-simpan-settings').addEventListener('click', async (e) => {
       e.preventDefault()
       const btn = e.currentTarget
       btn.disabled = true
       btn.textContent = 'Menyimpan...'
       try {
-        const inputs = container.querySelectorAll('.setting-input')
+        const inputs = container.querySelectorAll('.setting-input, #qris-url-hidden')
         for (const input of inputs) {
           if (input.value !== (settingsCache[input.dataset.key] || '')) {
             await updateSetting(input.dataset.key, input.value)
