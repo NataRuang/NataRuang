@@ -450,7 +450,8 @@ CREATE TRIGGER trg_increment_order_count
 -- ============================================================
 
 -- Produk paling banyak dilihat (7 hari terakhir)
-CREATE OR REPLACE VIEW v_produk_paling_dilihat AS
+CREATE OR REPLACE VIEW v_produk_paling_dilihat
+WITH (security_invoker = true) AS
 SELECT
   p.id,
   p.nama,
@@ -470,7 +471,8 @@ ORDER BY views_7hari DESC, total_views_all DESC
 LIMIT 20;
 
 -- Produk paling sering dipesan (30 hari terakhir)
-CREATE OR REPLACE VIEW v_produk_terlaris AS
+CREATE OR REPLACE VIEW v_produk_terlaris
+WITH (security_invoker = true) AS
 SELECT
   p.id,
   p.nama,
@@ -493,7 +495,8 @@ ORDER BY qty_30hari DESC, total_qty_all DESC
 LIMIT 20;
 
 -- Ringkasan penjualan harian (30 hari terakhir)
-CREATE OR REPLACE VIEW v_ringkasan_penjualan_harian AS
+CREATE OR REPLACE VIEW v_ringkasan_penjualan_harian
+WITH (security_invoker = true) AS
 SELECT
   DATE(o.created_at)        AS tanggal,
   COUNT(*)                  AS jumlah_pesanan,
@@ -506,7 +509,8 @@ GROUP BY DATE(o.created_at)
 ORDER BY tanggal ASC;
 
 -- Ringkasan penjualan bulanan
-CREATE OR REPLACE VIEW v_ringkasan_penjualan_bulanan AS
+CREATE OR REPLACE VIEW v_ringkasan_penjualan_bulanan
+WITH (security_invoker = true) AS
 SELECT
   TO_CHAR(o.created_at, 'YYYY-MM')  AS bulan,
   COUNT(*)                           AS jumlah_pesanan,
@@ -520,7 +524,8 @@ GROUP BY TO_CHAR(o.created_at, 'YYYY-MM')
 ORDER BY bulan DESC;
 
 -- Dashboard summary (dipakai kartu statistik atas dashboard)
-CREATE OR REPLACE VIEW v_dashboard_summary AS
+CREATE OR REPLACE VIEW v_dashboard_summary
+WITH (security_invoker = true) AS
 SELECT
   (SELECT COUNT(*) FROM products WHERE deleted_at IS NULL)          AS total_produk,
   (SELECT COUNT(*) FROM orders   WHERE deleted_at IS NULL)          AS total_pesanan,

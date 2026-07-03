@@ -540,7 +540,8 @@ CREATE TRIGGER trg_auto_stok_penjualan
 -- 11. KARTU STOK (view gabungan, enak dibaca di UI)
 -- ============================================================
 
-CREATE OR REPLACE VIEW v_kartu_stok AS
+CREATE OR REPLACE VIEW v_kartu_stok
+WITH (security_invoker = true) AS
 SELECT
   sp.id, sp.product_id, p.nama AS nama_produk, p.kode_produk,
   sp.gudang_id, g.nama_gudang,
