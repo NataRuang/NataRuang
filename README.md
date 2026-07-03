@@ -67,6 +67,19 @@ npm run dev
    (migration ini menambahkan sistem akun staff multi-role: Admin / CS / Finance)
 5. Salin seluruh isi `database/003_live_chat.sql` → **Run**
    (migration ini menambahkan live chat dua arah antara CS dan pengunjung, realtime)
+6. Salin seluruh isi `database/005_akuntansi.sql` → **Run**
+   (migration ini menambahkan sistem akuntansi penuh: bagan akun, jurnal umum,
+   buku besar, neraca, laba rugi, dan pondasi PPN — pemasukan otomatis terjurnal
+   setiap pembayaran diverifikasi lunas)
+7. Salin seluruh isi `database/006_inventaris.sql` → **Run**
+   (migration ini menambahkan manajemen stok: multi-gudang, kartu stok, valuasi
+   HPP FIFO/rata-rata, retur pembeli & supplier, barang rusak/hilang dengan
+   approval — stok otomatis berkurang + HPP terjurnal setiap pembayaran lunas)
+8. Salin seluruh isi `database/007_fix_security_views.sql` → **Run**
+   (perbaikan keamanan: memaksa semua VIEW memakai `security_invoker`, supaya
+   RLS pengguna asli benar-benar berlaku, bukan hak akses pembuat view. Wajib
+   dijalankan — tanpa ini, view analitik/laporan bisa bocor lewat REST API
+   Supabase ke luar dari kebijakan RLS yang seharusnya)
 
 ### Buat akun staff (Admin / CS / Finance)
 Login staff memakai **username**, bukan email — tapi Supabase Auth tetap butuh
@@ -94,12 +107,30 @@ pembuatan akun dilakukan manual lewat Dashboard:
 > - **Admin**: akses penuh ke semua menu
 > - **CS**: menu Dashboard, Pesanan (lihat & update status), **Live Chat**
 >   (balas pesan pengunjung secara real-time dua arah)
-> - **Finance**: menu Dashboard, Pembayaran (verifikasi), Laporan (export Excel/PDF)
+> - **Finance**: menu Dashboard, **Stok** (kartu stok, approval barang
+>   rusak/hilang), Pembayaran (verifikasi), **Laporan** (Penjualan, Jurnal
+>   Umum, Buku Besar, Neraca, Laba Rugi, Pengaturan Pajak)
 >
 > Live Chat juga aktif di widget chat halaman beranda (tombol **"Chat
 > langsung dengan CS kami"**) — begitu pengunjung memulai live chat, pesan
 > masuk real-time ke tab Live Chat di dashboard CS, dan balasan CS langsung
 > muncul di widget pengunjung tanpa refresh.
+>
+> **Akuntansi**: setiap pembayaran diverifikasi "Lunas" otomatis membuat
+> jurnal pendapatan (Bank/Pendapatan/PPN kalau PKP aktif) DAN jurnal HPP +
+> pengurangan stok — semuanya lewat database trigger, tidak perlu aksi
+> tambahan dari staff. Jurnal manual (mis. bayar sewa, gaji) bisa dicatat
+> lewat tombol **+ Jurnal Manual** di tab Laporan → Jurnal Umum.
+>
+> **Stok**: pembelian/retur/opname dicatat lewat tombol **+ Catat Pergerakan
+> Stok**. Barang rusak/hilang WAJIB disetujui dulu (tab Stok → Approval
+> Rusak/Hilang) sebelum stok resmi berkurang dan kerugian dijurnal. Metode
+> hitung HPP (FIFO / Rata-rata) bisa diganti di `store_settings` key
+> `metode_valuasi_stok` (lewat SQL Editor untuk saat ini).
+>
+> **Belum tercakup** (menyusul tahap berikutnya): pencatatan beban/biaya
+> operasional non-stok (gaji, sewa, listrik dll) — akunnya sudah disiapkan
+> di Bagan Akun, tinggal dibuatkan form input.
 
 ### Setup Storage
 Di Supabase Dashboard → **Storage** → buat dua bucket:
@@ -269,7 +300,10 @@ nataruang/
 ├── database/
 │   ├── schema.sql          # Seluruh SQL (tabel, trigger, RLS, view, rating)
 │   ├── 002_staff_roles.sql # Migration: akun staff Admin/CS/Finance (login username)
-│   └── 003_live_chat.sql   # Migration: live chat CS ↔ pengunjung (realtime)
+│   ├── 003_live_chat.sql   # Migration: live chat CS ↔ pengunjung (realtime)
+│   ├── 005_akuntansi.sql   # Migration: jurnal umum, buku besar, neraca, pondasi PPN
+│   ├── 006_inventaris.sql  # Migration: manajemen stok, FIFO/rata-rata, retur, barang rusak
+│   └── 007_fix_security_views.sql # Perbaikan: security_invoker di semua VIEW (wajib)
 ├── public/
 │   ├── images/
 │   ├── icons/
