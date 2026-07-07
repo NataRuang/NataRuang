@@ -2,43 +2,34 @@
 // Logika Dashboard Admin NataRuang — CRUD produk, kategori, pesanan,
 // pembayaran, ongkir, chatbot FAQ, testimoni, laporan, pengaturan.
 
-import { requireRole, logoutStaff, changeMyPassword, ROLE_LABELS } from '@/lib/auth.js'
+import { requireAdmin, logoutAdmin } from '@/lib/auth.js'
 import {
   getSettings, updateSetting,
   getCategories, upsertCategory, deleteCategory,
   getProducts, getProductById, upsertProduct, deleteProduct,
-  getProductsRingkas,
-  uploadFotoProduk, uploadFileUmum, insertProductImage, deleteProductImage,
+  uploadFotoProduk, insertProductImage, deleteProductImage,
   getAllShippingRates, upsertShippingRate, deleteShippingRate,
   getOrders, updateOrderStatus,
   getPaymentsPending, verifyPayment,
   getFaqsAdmin, upsertFaq, deleteFaq,
   getTestimonialsAdmin, upsertTestimonial, deleteTestimonial,
   getDashboardSummary, getProdukPalingDilihat, getProdukTerlaris,
-  getPenjualanHarian, getPenjualanBulanan, getOrdersExport,
-  getPercakapanCS, getPesanPercakapan, kirimPesanCS, updateStatusPercakapan,
-  tandaiPesanDibacaCS, hitungPesanBelumDibaca, subscribeSemuaPercakapan,
-  getBaganAkun, getJurnalEntries, getJurnalDetail, buatJurnalManual, hapusJurnal,
-  getBukuBesar, getNeraca, getLabaRugi,
-  getGudang, upsertGudang, getStokLokasi, catatPergerakanStok,
-  setujuiPergerakanStok, getPergerakanMenungguApproval, getKartuStok
+  getPenjualanHarian, getPenjualanBulanan, getOrdersExport
 } from '@/lib/api.js'
 import {
-  formatRupiah, formatTanggal, formatDatetime, escapeHtml, toast, debounce,
+  formatRupiah, formatTanggal, escapeHtml, toast, debounce,
   initDarkMode, toggleDarkMode
 } from '@/lib/utils.js'
 import { prosesGambarProduk } from '@/lib/watermark.js'
 import { exportOrdersExcel, exportOrdersPDF, cetakNotaPesanan } from '@/lib/report.js'
 
 let settingsCache = {}
-let currentUser   = null   // { user, profile }
-let unsubChatRealtime = null
+let currentUser   = null
 
-// ── Guard: wajib login sebagai Admin / CS / Finance ────────────
-// Menu sidebar akan menyesuaikan otomatis sesuai role (lihat applyRoleMenu()).
+// ── Guard: wajib login ───────────────────────────────────────
 ;(async function bootstrap() {
-  currentUser = await requireRole(['admin', 'cs', 'finance'])
-  if (!currentUser) return // sudah di-redirect ke login.html oleh requireRole()
+  currentUser = await requireAdmin()
+  if (!currentUser) return // sudah di-redirect ke login.html oleh requireAdmin()
   await init()
 })()
 
@@ -46,16 +37,10 @@ async function init() {
   initDarkMode()
   document.getElementById('btn-darkmode').addEventListener('click', toggleDarkMode)
 
-  renderStaffBadge()
-  applyRoleMenu(currentUser.profile.role)
-
   document.getElementById('btn-logout').addEventListener('click', async () => {
-    if (unsubChatRealtime) unsubChatRealtime()
-    await logoutStaff()
+    await logoutAdmin()
     window.location.replace('/login.html')
   })
-
-  document.getElementById('btn-ganti-password').addEventListener('click', bukaFormGantiPassword)
 
   document.getElementById('btn-sidebar-toggle').addEventListener('click', () => {
     document.getElementById('sidebar').classList.toggle('-translate-x-full')
@@ -75,19 +60,14 @@ async function init() {
     console.error('Gagal memuat pengaturan:', e)
   }
 
-  if (['admin', 'cs'].includes(currentUser.profile.role)) {
-    await perbaruiBadgeLivechat()
-    mulaiRealtimeChatJikaBelum()
-  }
-
   await loadDashboard()
 }
 
 // ── Tab switching ────────────────────────────────────────────
 
 const TAB_TITLES = {
-  dashboard: 'Dashboard', produk: 'Produk', kategori: 'Kategori', stok: 'Stok', pesanan: 'Pesanan',
-  livechat: 'Live Chat', pembayaran: 'Pembayaran', ongkir: 'Ongkos Kirim', chatbot: 'Chatbot FAQ',
+  dashboard: 'Dashboard', produk: 'Produk', kategori: 'Kategori', pesanan: 'Pesanan',
+  pembayaran: 'Pembayaran', ongkir: 'Ongkos Kirim', chatbot: 'Chatbot FAQ',
   testimoni: 'Testimoni', laporan: 'Laporan', pengaturan: 'Pengaturan'
 }
 
@@ -110,8 +90,7 @@ async function switchTab(tab) {
   document.getElementById('sidebar-overlay').classList.add('hidden')
 
   const loaders = {
-    produk: loadProdukTab, kategori: loadKategoriTab, stok: loadStokTab, pesanan: loadPesananTab,
-    livechat: loadLiveChatTab,
+    produk: loadProdukTab, kategori: loadKategoriTab, pesanan: loadPesananTab,
     pembayaran: loadPembayaranTab, ongkir: loadOngkirTab, chatbot: loadFaqTab,
     testimoni: loadTestimoniTab, laporan: loadLaporanTab, pengaturan: loadPengaturanTab
   }
@@ -149,71 +128,6 @@ function closeModal() {
   document.getElementById('modal-body').innerHTML = ''
 }
 window.closeModal = closeModal // dipakai tombol batal di beberapa form
-
-// ── STAFF BADGE, GANTI PASSWORD & FILTER MENU PER ROLE ─────────
-
-function applyRoleMenu(role) {
-  document.querySelectorAll('.sidebar-btn[data-roles]').forEach(btn => {
-    const allowed = btn.dataset.roles.split(',')
-    if (!allowed.includes(role)) btn.classList.add('hidden')
-  })
-}
-
-function renderStaffBadge() {
-  const el = document.getElementById('staff-badge')
-  if (!el || !currentUser) return
-  const { nama_lengkap, role } = currentUser.profile
-  el.textContent = `${nama_lengkap} · ${ROLE_LABELS[role] || role}`
-}
-
-function bukaFormGantiPassword() {
-  openModal('Ganti Password', `
-    <form id="form-ganti-password" class="space-y-4">
-      <div>
-        <label class="block text-sm font-medium mb-1.5">Password Lama</label>
-        <input type="password" id="gp-lama" required minlength="6" class="input-field w-full">
-      </div>
-      <div>
-        <label class="block text-sm font-medium mb-1.5">Password Baru</label>
-        <input type="password" id="gp-baru" required minlength="6" class="input-field w-full">
-      </div>
-      <div>
-        <label class="block text-sm font-medium mb-1.5">Ulangi Password Baru</label>
-        <input type="password" id="gp-ulang" required minlength="6" class="input-field w-full">
-      </div>
-      <p id="gp-error" class="text-red-500 text-xs hidden"></p>
-      <div class="flex gap-3 pt-2">
-        <button type="button" onclick="closeModal()" class="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-charcoal-200 dark:border-charcoal-700">Batal</button>
-        <button type="submit" class="flex-1 btn-primary py-2.5 rounded-xl text-sm font-semibold">Simpan</button>
-      </div>
-    </form>
-  `)
-
-  document.getElementById('form-ganti-password').addEventListener('submit', async (e) => {
-    e.preventDefault()
-    const errEl  = document.getElementById('gp-error')
-    const lama   = document.getElementById('gp-lama').value
-    const baru   = document.getElementById('gp-baru').value
-    const ulang  = document.getElementById('gp-ulang').value
-
-    errEl.classList.add('hidden')
-
-    if (baru !== ulang) {
-      errEl.textContent = 'Password baru dan ulangi password tidak sama'
-      errEl.classList.remove('hidden')
-      return
-    }
-
-    try {
-      await changeMyPassword(currentUser.profile.username, lama, baru)
-      closeModal()
-      toast('Password berhasil diubah')
-    } catch (err) {
-      errEl.textContent = err.message || 'Gagal mengubah password'
-      errEl.classList.remove('hidden')
-    }
-  })
-}
 
 // ── DASHBOARD ────────────────────────────────────────────────
 
@@ -1128,97 +1042,89 @@ async function loadPengaturanTab() {
   await renderSettingsForm()
 }
 
-const SETTINGS_SECTIONS = [
-  {
-    judul: 'Informasi Toko',
-    fields: {
-      nama_toko: 'Nama Toko', tagline: 'Tagline', alamat: 'Alamat Toko',
-      nomor_wa: 'Nomor WhatsApp (format 628xxx)', email: 'Email Toko', jam_operasional: 'Jam Operasional',
-    },
-  },
-  {
-    judul: 'Pembayaran (Rekening Bank & QRIS)',
-    fields: {
-      bank_nama: 'Nama Bank', bank_rekening: 'Nomor Rekening', bank_atas_nama: 'Atas Nama Rekening',
-    },
-  },
-  {
-    judul: 'Sosial Media',
-    fields: { instagram: 'Instagram (tanpa @)', facebook: 'URL Facebook', tiktok: 'TikTok (tanpa @)' },
-  },
-  {
-    judul: 'Lainnya',
-    fields: {
-      logo_url: 'URL Logo', watermark_text: 'Teks Watermark Foto', watermark_opacity: 'Opasitas Watermark (0–1)',
-      maps_embed: 'Embed URL Google Maps',
-    },
-  },
-]
+const SETTINGS_FIELDS = {
+  nama_toko:         { label: 'Nama Toko' },
+  tagline:           { label: 'Tagline' },
+  alamat:            { label: 'Alamat Toko' },
+  nomor_wa:          { label: 'Nomor WhatsApp (628xxx)' },
+  email:             { label: 'Email Toko' },
+  jam_operasional:   { label: 'Jam Operasional' },
+  instagram:         { label: 'Instagram (tanpa @)' },
+  facebook:          { label: 'URL Facebook' },
+  tiktok:            { label: 'TikTok (tanpa @)' },
+  bank_nama:         { label: 'Nama Bank' },
+  bank_rekening:     { label: 'Nomor Rekening' },
+  bank_atas_nama:    { label: 'Atas Nama Rekening' },
+  qris_url:          { label: 'URL Gambar QRIS' },
+  logo_url:          { label: 'URL Logo' },
+  watermark_text:    { label: 'Teks Watermark Foto' },
+  watermark_opacity: { label: 'Opasitas Watermark (0–1)' },
+  maps_embed:        { label: 'Embed URL Google Maps' },
+
+  promo_aktif:      { label: 'Tampilkan Banner Promo di Halaman Utama', type: 'toggle', group: 'Promo / Flash Sale' },
+  promo_judul:      { label: 'Judul Promo (mis. Flash Sale Akhir Bulan)', group: 'Promo / Flash Sale' },
+  promo_teks:       { label: 'Deskripsi Promo', group: 'Promo / Flash Sale' },
+  promo_link:       { label: 'Link Tombol "Lihat Promo"', group: 'Promo / Flash Sale' },
+  promo_berakhir:   { label: 'Promo Berakhir Pada', type: 'datetime-local', group: 'Promo / Flash Sale' },
+
+  member_aktif:     { label: 'Tampilkan Bagian Member di Halaman Utama', type: 'toggle', group: 'Program Member' },
+  member_benefit_1: { label: 'Manfaat Member #1', group: 'Program Member' },
+  member_benefit_2: { label: 'Manfaat Member #2', group: 'Program Member' },
+  member_benefit_3: { label: 'Manfaat Member #3', group: 'Program Member' },
+  member_benefit_4: { label: 'Manfaat Member #4', group: 'Program Member' }
+}
+
+function fieldInputHtml(key, field, value) {
+  if (field.type === 'toggle') {
+    const checked = value === 'true'
+    return `
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" data-key="${key}" class="setting-input w-4 h-4 text-wood-600 rounded" ${checked ? 'checked' : ''}>
+        <span class="text-xs text-charcoal-500">${checked ? 'Aktif' : 'Nonaktif'}</span>
+      </label>`
+  }
+  if (field.type === 'datetime-local') {
+    return `<input type="datetime-local" data-key="${key}" class="input-field setting-input" value="${escapeHtml(value)}">`
+  }
+  return `<input data-key="${key}" class="input-field setting-input" value="${escapeHtml(value)}">`
+}
 
 async function renderSettingsForm() {
   const container = document.getElementById('form-settings')
   try {
     settingsCache = await getSettings()
 
-    container.innerHTML = SETTINGS_SECTIONS.map(sec => `
-      <div class="mb-6">
-        <h3 class="font-semibold text-sm mb-3 text-charcoal-500 dark:text-charcoal-400">${sec.judul}</h3>
-        <div class="space-y-4">
-          ${Object.keys(sec.fields).map(key => `
-            <div>
-              <label class="label text-xs">${sec.fields[key]}</label>
-              <input data-key="${key}" class="input-field w-full setting-input" value="${escapeHtml(settingsCache[key] || '')}">
-            </div>`).join('')}
-        </div>
-      </div>`).join('') + `
-      <div class="mb-6">
-        <h3 class="font-semibold text-sm mb-3 text-charcoal-500 dark:text-charcoal-400">Gambar QRIS</h3>
-        <div class="flex items-start gap-4">
-          <div id="qris-preview-wrap" class="w-32 h-32 rounded-xl border border-charcoal-200 dark:border-charcoal-700 overflow-hidden flex items-center justify-center bg-charcoal-50 dark:bg-charcoal-800 flex-shrink-0">
-            ${settingsCache.qris_url
-              ? `<img id="qris-preview" src="${escapeHtml(settingsCache.qris_url)}" class="w-full h-full object-contain">`
-              : `<span class="text-[10px] text-charcoal-400 text-center px-2">Belum ada QRIS</span>`}
-          </div>
-          <div class="flex-1">
-            <input id="qris-file" type="file" accept="image/jpeg,image/png,image/webp" class="input-field w-full text-xs">
-            <p class="text-[11px] text-charcoal-400 mt-1.5">Upload foto/screenshot QRIS toko (JPG/PNG/WebP). Tampil otomatis di halaman pembayaran pembeli.</p>
-            <p id="qris-upload-status" class="text-xs mt-1 hidden"></p>
-          </div>
-        </div>
-        <input type="hidden" data-key="qris_url" id="qris-url-hidden" value="${escapeHtml(settingsCache.qris_url || '')}">
-      </div>
+    let lastGroup = null
+    container.innerHTML = Object.keys(SETTINGS_FIELDS).map(key => {
+      const field = SETTINGS_FIELDS[key]
+      const groupHeader = field.group && field.group !== lastGroup
+        ? `<p class="text-xs font-semibold text-wood-600 uppercase tracking-wide pt-4 pb-1 ${lastGroup ? 'border-t border-charcoal-100 dark:border-charcoal-800 mt-2' : ''}">${field.group}</p>`
+        : ''
+      lastGroup = field.group || lastGroup
+      return `
+        ${groupHeader}
+        <div>
+          <label class="label text-xs">${field.label}</label>
+          ${fieldInputHtml(key, field, settingsCache[key] || '')}
+        </div>`
+    }).join('')
+
+    container.innerHTML += `
       <button id="btn-simpan-settings" class="btn-primary w-full py-2.5 rounded-xl text-sm mt-2">Simpan Semua Pengaturan</button>
       <p class="text-[11px] text-charcoal-400 text-center mt-2">Kredensial Supabase (URL &amp; anon key) diatur lewat file .env, bukan di sini, demi keamanan.</p>
     `
-
-    document.getElementById('qris-file').addEventListener('change', async (e) => {
-      const file = e.target.files[0]
-      if (!file) return
-      const statusEl = document.getElementById('qris-upload-status')
-      statusEl.textContent = 'Mengunggah...'
-      statusEl.classList.remove('hidden', 'text-red-500')
-      try {
-        const url = await uploadFileUmum(file, 'pengaturan')
-        document.getElementById('qris-url-hidden').value = url
-        document.getElementById('qris-preview-wrap').innerHTML = `<img id="qris-preview" src="${url}" class="w-full h-full object-contain">`
-        statusEl.textContent = 'Berhasil diunggah — klik "Simpan Semua Pengaturan" untuk menerapkan'
-        statusEl.classList.add('text-green-600')
-      } catch (err) {
-        statusEl.textContent = 'Gagal upload: ' + err.message
-        statusEl.classList.add('text-red-500')
-      }
-    })
-
     document.getElementById('btn-simpan-settings').addEventListener('click', async (e) => {
       e.preventDefault()
       const btn = e.currentTarget
       btn.disabled = true
       btn.textContent = 'Menyimpan...'
       try {
-        const inputs = container.querySelectorAll('.setting-input, #qris-url-hidden')
+        const inputs = container.querySelectorAll('.setting-input')
         for (const input of inputs) {
-          if (input.value !== (settingsCache[input.dataset.key] || '')) {
-            await updateSetting(input.dataset.key, input.value)
+          const key    = input.dataset.key
+          const newVal = input.type === 'checkbox' ? String(input.checked) : input.value
+          if (newVal !== (settingsCache[key] || '')) {
+            await updateSetting(key, newVal)
           }
         }
         toast('Pengaturan berhasil disimpan', 'success')
@@ -1235,49 +1141,9 @@ async function renderSettingsForm() {
   }
 }
 
-let laporanSubTabsInit = false
-let stokSubTabsInit = false
-
 async function loadLaporanTab() {
   document.getElementById('btn-export-excel').addEventListener('click', () => exportLaporan('excel'))
   document.getElementById('btn-export-pdf').addEventListener('click', () => exportLaporan('pdf'))
-
-  if (!laporanSubTabsInit) {
-    laporanSubTabsInit = true
-    const nav = document.querySelectorAll('#tab-laporan .lap-subtab-btn')
-    nav.forEach(btn => {
-      btn.addEventListener('click', () => {
-        nav.forEach(b => b.classList.toggle('active', b === btn))
-        document.querySelectorAll('#tab-laporan .lap-subpanel').forEach(p => p.classList.add('hidden'))
-        document.getElementById(`lap-sub-${btn.dataset.sub}`).classList.remove('hidden')
-        onShowLaporanSubTab(btn.dataset.sub)
-      })
-    })
-  }
-
-  document.getElementById('btn-filter-jurnal').addEventListener('click', () => renderJurnalUmum(1))
-  document.getElementById('btn-jurnal-manual').addEventListener('click', bukaFormJurnalManual)
-  document.getElementById('btn-filter-bb').addEventListener('click', renderBukuBesar)
-  document.getElementById('btn-filter-neraca').addEventListener('click', renderNeraca)
-  document.getElementById('btn-filter-lr').addEventListener('click', renderLabaRugi)
-  document.getElementById('form-pajak').addEventListener('submit', simpanPengaturanPajak)
-
-  const today = new Date().toISOString().slice(0, 10)
-  document.getElementById('neraca-tanggal').value = today
-  document.getElementById('lr-dari').value = today.slice(0, 8) + '01'
-  document.getElementById('lr-sampai').value = today
-}
-
-let laporanSubTabLoaded = new Set()
-
-function onShowLaporanSubTab(sub) {
-  if (laporanSubTabLoaded.has(sub)) return
-  laporanSubTabLoaded.add(sub)
-  if (sub === 'jurnal')     renderJurnalUmum(1)
-  if (sub === 'bukubesar')  isiDropdownAkun()
-  if (sub === 'neraca')     renderNeraca()
-  if (sub === 'labarugi')   renderLabaRugi()
-  if (sub === 'pajak')      isiFormPajak()
 }
 
 async function exportLaporan(tipe) {
@@ -1320,866 +1186,5 @@ async function exportLaporan(tipe) {
   } finally {
     btn.disabled = false
     btn.textContent = teksAsli
-  }
-}
-
-// ══════════════════════════════════════════════════════════
-// LAPORAN — SUB: JURNAL UMUM
-// ══════════════════════════════════════════════════════════
-
-async function renderJurnalUmum(page = 1) {
-  const dari = document.getElementById('jurnal-dari').value || undefined
-  const sampai = document.getElementById('jurnal-sampai').value || undefined
-  const tbl = document.getElementById('tbl-jurnal')
-  tbl.innerHTML = `<div class="animate-skeleton bg-charcoal-100 dark:bg-charcoal-800 h-40 m-4 rounded-xl"></div>`
-
-  try {
-    const { rows, totalPages } = await getJurnalEntries({ dari, sampai, page })
-
-    if (!rows.length) {
-      tbl.innerHTML = `<p class="text-center text-sm text-charcoal-400 py-8">Belum ada jurnal pada rentang ini</p>`
-      document.getElementById('paginasi-jurnal').innerHTML = ''
-      return
-    }
-
-    tbl.innerHTML = `
-      <div class="overflow-x-auto">
-      <table class="admin-table">
-        <thead><tr><th>No. Jurnal</th><th>Tanggal</th><th>Keterangan</th><th>Sumber</th><th>Debit</th><th>Kredit</th><th></th></tr></thead>
-        <tbody>
-          ${rows.map(j => `<tr class="cursor-pointer" data-id="${j.id}">
-            <td class="font-mono text-xs">${j.nomor_jurnal}</td>
-            <td>${formatTanggal(j.tanggal)}</td>
-            <td>${escapeHtml(j.keterangan)}</td>
-            <td><span class="text-xs text-charcoal-400">${j.sumber === 'manual' ? 'Manual' : 'Otomatis'}</span></td>
-            <td>${formatRupiah(j.total_debit)}</td>
-            <td>${formatRupiah(j.total_kredit)}</td>
-            <td>
-              ${currentUser.profile.role === 'admin'
-                ? `<button class="btn-hapus-jurnal text-red-500 hover:text-red-600 text-xs" data-id="${j.id}">Hapus</button>`
-                : ''}
-            </td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-      </div>`
-
-    tbl.querySelectorAll('tr[data-id]').forEach(tr =>
-      tr.addEventListener('click', (e) => {
-        if (e.target.closest('.btn-hapus-jurnal')) return
-        lihatDetailJurnal(tr.dataset.id)
-      })
-    )
-    tbl.querySelectorAll('.btn-hapus-jurnal').forEach(btn =>
-      btn.addEventListener('click', async (e) => {
-        e.stopPropagation()
-        if (!confirm('Hapus jurnal ini? Tindakan ini tidak bisa dibatalkan.')) return
-        try {
-          await hapusJurnal(btn.dataset.id)
-          toast('Jurnal dihapus')
-          renderJurnalUmum(page)
-        } catch (err) {
-          toast('Gagal menghapus: ' + err.message, 'error')
-        }
-      })
-    )
-
-    renderSimplePagination('paginasi-jurnal', page, totalPages, (p) => renderJurnalUmum(p))
-  } catch (e) {
-    tbl.innerHTML = `<p class="text-center text-sm text-red-500 py-8">Gagal memuat jurnal</p>`
-  }
-}
-
-async function lihatDetailJurnal(jurnalId) {
-  try {
-    const baris = await getJurnalDetail(jurnalId)
-    openModal('Detail Jurnal', `
-      <table class="admin-table">
-        <thead><tr><th>Akun</th><th>Debit</th><th>Kredit</th><th>Keterangan</th></tr></thead>
-        <tbody>
-          ${baris.map(b => `<tr>
-            <td>${b.akun.kode_akun} — ${escapeHtml(b.akun.nama_akun)}</td>
-            <td>${Number(b.debit) > 0 ? formatRupiah(b.debit) : '-'}</td>
-            <td>${Number(b.kredit) > 0 ? formatRupiah(b.kredit) : '-'}</td>
-            <td class="text-xs text-charcoal-400">${escapeHtml(b.keterangan || '')}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-    `)
-  } catch (e) {
-    toast('Gagal memuat detail jurnal', 'error')
-  }
-}
-
-let baganAkunCache = []
-
-async function bukaFormJurnalManual() {
-  if (!baganAkunCache.length) baganAkunCache = await getBaganAkun()
-
-  const opsiAkun = baganAkunCache.map(a => `<option value="${a.id}">${a.kode_akun} — ${escapeHtml(a.nama_akun)}</option>`).join('')
-
-  openModal('Jurnal Manual', `
-    <form id="form-jurnal-manual" class="space-y-4">
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="label text-xs">Tanggal</label>
-          <input type="date" id="jm-tanggal" required class="input-field w-full" value="${new Date().toISOString().slice(0,10)}">
-        </div>
-      </div>
-      <div>
-        <label class="label text-xs">Keterangan</label>
-        <input type="text" id="jm-keterangan" required class="input-field w-full" placeholder="Mis. Pembayaran sewa toko bulan Juli">
-      </div>
-      <div>
-        <label class="label text-xs">Baris Jurnal (minimal 2, total debit harus = total kredit)</label>
-        <div id="jm-baris" class="space-y-2"></div>
-        <button type="button" id="jm-tambah-baris" class="text-xs text-wood-600 mt-2">+ Tambah baris</button>
-      </div>
-      <div class="flex justify-between text-xs font-semibold pt-2 border-t border-charcoal-100 dark:border-charcoal-800">
-        <span>Total Debit: <span id="jm-total-debit">Rp 0</span></span>
-        <span>Total Kredit: <span id="jm-total-kredit">Rp 0</span></span>
-      </div>
-      <p id="jm-error" class="text-red-500 text-xs hidden"></p>
-      <div class="flex gap-3 pt-2">
-        <button type="button" onclick="closeModal()" class="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-charcoal-200 dark:border-charcoal-700">Batal</button>
-        <button type="submit" class="flex-1 btn-primary py-2.5 rounded-xl text-sm font-semibold">Simpan Jurnal</button>
-      </div>
-    </form>
-  `)
-
-  const barisEl = document.getElementById('jm-baris')
-
-  function tambahBaris() {
-    const row = document.createElement('div')
-    row.className = 'flex gap-2 items-start jm-row'
-    row.innerHTML = `
-      <select class="input-field flex-1 jm-akun text-xs">${opsiAkun}</select>
-      <input type="number" min="0" step="1" placeholder="Debit" class="input-field w-28 jm-debit text-xs">
-      <input type="number" min="0" step="1" placeholder="Kredit" class="input-field w-28 jm-kredit text-xs">
-      <button type="button" class="jm-hapus-baris text-red-500 text-xs px-1">✕</button>
-    `
-    barisEl.appendChild(row)
-    row.querySelector('.jm-debit').addEventListener('input', hitungTotalJurnal)
-    row.querySelector('.jm-kredit').addEventListener('input', hitungTotalJurnal)
-    row.querySelector('.jm-hapus-baris').addEventListener('click', () => { row.remove(); hitungTotalJurnal() })
-  }
-
-  function hitungTotalJurnal() {
-    let td = 0, tk = 0
-    barisEl.querySelectorAll('.jm-row').forEach(r => {
-      td += Number(r.querySelector('.jm-debit').value || 0)
-      tk += Number(r.querySelector('.jm-kredit').value || 0)
-    })
-    document.getElementById('jm-total-debit').textContent = formatRupiah(td)
-    document.getElementById('jm-total-kredit').textContent = formatRupiah(tk)
-  }
-
-  document.getElementById('jm-tambah-baris').addEventListener('click', tambahBaris)
-  tambahBaris()
-  tambahBaris()
-
-  document.getElementById('form-jurnal-manual').addEventListener('submit', async (e) => {
-    e.preventDefault()
-    const errEl = document.getElementById('jm-error')
-    errEl.classList.add('hidden')
-
-    const baris = [...barisEl.querySelectorAll('.jm-row')].map(r => ({
-      akun_id: r.querySelector('.jm-akun').value,
-      debit: Number(r.querySelector('.jm-debit').value || 0),
-      kredit: Number(r.querySelector('.jm-kredit').value || 0),
-    })).filter(b => b.debit > 0 || b.kredit > 0)
-
-    try {
-      await buatJurnalManual({
-        tanggal: document.getElementById('jm-tanggal').value,
-        keterangan: document.getElementById('jm-keterangan').value,
-        baris,
-      })
-      closeModal()
-      toast('Jurnal berhasil disimpan')
-      laporanSubTabLoaded.delete('jurnal')
-      renderJurnalUmum(1)
-    } catch (err) {
-      errEl.textContent = err.message
-      errEl.classList.remove('hidden')
-    }
-  })
-}
-
-// ══════════════════════════════════════════════════════════
-// LAPORAN — SUB: BUKU BESAR
-// ══════════════════════════════════════════════════════════
-
-async function isiDropdownAkun() {
-  if (!baganAkunCache.length) baganAkunCache = await getBaganAkun()
-  const sel = document.getElementById('bb-akun')
-  sel.innerHTML = baganAkunCache.map(a => `<option value="${a.id}">${a.kode_akun} — ${escapeHtml(a.nama_akun)}</option>`).join('')
-}
-
-async function renderBukuBesar() {
-  const akunId = document.getElementById('bb-akun').value
-  const dari = document.getElementById('bb-dari').value || undefined
-  const sampai = document.getElementById('bb-sampai').value || undefined
-  const tbl = document.getElementById('tbl-bukubesar')
-  if (!akunId) return
-  tbl.innerHTML = `<div class="animate-skeleton bg-charcoal-100 dark:bg-charcoal-800 h-40 m-4 rounded-xl"></div>`
-
-  try {
-    const rows = await getBukuBesar(akunId, { dari, sampai })
-    if (!rows.length) {
-      tbl.innerHTML = `<p class="text-center text-sm text-charcoal-400 py-8">Belum ada transaksi pada akun/rentang ini</p>`
-      return
-    }
-    tbl.innerHTML = `
-      <div class="overflow-x-auto">
-      <table class="admin-table">
-        <thead><tr><th>Tanggal</th><th>No. Jurnal</th><th>Keterangan</th><th>Debit</th><th>Kredit</th><th>Saldo</th></tr></thead>
-        <tbody>
-          ${rows.map(r => `<tr>
-            <td>${formatTanggal(r.tanggal)}</td>
-            <td class="font-mono text-xs">${r.nomor_jurnal}</td>
-            <td class="text-xs">${escapeHtml(r.keterangan || '')}</td>
-            <td>${Number(r.debit) > 0 ? formatRupiah(r.debit) : '-'}</td>
-            <td>${Number(r.kredit) > 0 ? formatRupiah(r.kredit) : '-'}</td>
-            <td class="font-semibold">${formatRupiah(r.saldo)}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-      </div>`
-  } catch (e) {
-    tbl.innerHTML = `<p class="text-center text-sm text-red-500 py-8">Gagal memuat buku besar</p>`
-  }
-}
-
-// ══════════════════════════════════════════════════════════
-// LAPORAN — SUB: NERACA
-// ══════════════════════════════════════════════════════════
-
-async function renderNeraca() {
-  const perTanggal = document.getElementById('neraca-tanggal').value
-  const el = document.getElementById('tbl-neraca')
-  el.innerHTML = `<div class="animate-skeleton bg-charcoal-100 dark:bg-charcoal-800 h-40 rounded-xl"></div>`
-
-  try {
-    const rows = await getNeraca(perTanggal)
-    const kelompok = { aset: [], kewajiban: [], ekuitas: [] }
-    rows.forEach(r => kelompok[r.tipe]?.push(r))
-
-    const totalAset = kelompok.aset.reduce((s, r) => s + Number(r.saldo), 0)
-    const totalKewajiban = kelompok.kewajiban.reduce((s, r) => s + Number(r.saldo), 0)
-    const totalEkuitas = kelompok.ekuitas.reduce((s, r) => s + Number(r.saldo), 0)
-    const balance = Math.round(totalAset - (totalKewajiban + totalEkuitas))
-
-    const seksi = (judul, items, total) => `
-      <div class="mb-5">
-        <h3 class="font-semibold text-sm mb-2">${judul}</h3>
-        <table class="admin-table">
-          <tbody>
-            ${items.map(r => `<tr><td>${r.kode_akun} — ${escapeHtml(r.nama_akun)}</td><td class="text-right">${formatRupiah(r.saldo)}</td></tr>`).join('') || '<tr><td colspan="2" class="text-xs text-charcoal-400">Tidak ada saldo</td></tr>'}
-            <tr class="font-semibold border-t border-charcoal-200 dark:border-charcoal-700"><td>Total</td><td class="text-right">${formatRupiah(total)}</td></tr>
-          </tbody>
-        </table>
-      </div>`
-
-    el.innerHTML = `
-      <div class="grid md:grid-cols-2 gap-6">
-        <div>${seksi('Aset', kelompok.aset, totalAset)}</div>
-        <div>
-          ${seksi('Kewajiban', kelompok.kewajiban, totalKewajiban)}
-          ${seksi('Ekuitas', kelompok.ekuitas, totalEkuitas)}
-        </div>
-      </div>
-      <div class="mt-2 p-3 rounded-xl text-xs font-semibold ${balance === 0 ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'}">
-        ${balance === 0 ? '✓ Neraca balance (Aset = Kewajiban + Ekuitas)' : `⚠ Selisih ${formatRupiah(Math.abs(balance))} — mohon periksa jurnal`}
-      </div>`
-  } catch (e) {
-    el.innerHTML = `<p class="text-center text-sm text-red-500 py-8">Gagal memuat neraca</p>`
-  }
-}
-
-// ══════════════════════════════════════════════════════════
-// LAPORAN — SUB: LABA RUGI
-// ══════════════════════════════════════════════════════════
-
-async function renderLabaRugi() {
-  const dari = document.getElementById('lr-dari').value
-  const sampai = document.getElementById('lr-sampai').value
-  const el = document.getElementById('tbl-labarugi')
-  el.innerHTML = `<div class="animate-skeleton bg-charcoal-100 dark:bg-charcoal-800 h-40 rounded-xl"></div>`
-
-  try {
-    const rows = await getLabaRugi(dari, sampai)
-    const pendapatan = rows.filter(r => r.tipe === 'pendapatan' && !r.kontra)
-    const kontraPendapatan = rows.filter(r => r.tipe === 'pendapatan' && r.kontra)
-    const beban = rows.filter(r => r.tipe === 'beban')
-
-    const totalPendapatanKotor = pendapatan.reduce((s, r) => s + Number(r.jumlah), 0)
-    const totalKontra = kontraPendapatan.reduce((s, r) => s + Number(r.jumlah), 0)
-    const totalPendapatanBersih = totalPendapatanKotor - totalKontra
-    const totalBeban = beban.reduce((s, r) => s + Number(r.jumlah), 0)
-    const labaBersih = totalPendapatanBersih - totalBeban
-
-    const baris = (r) => `<tr><td>${r.kode_akun} — ${escapeHtml(r.nama_akun)}</td><td class="text-right">${formatRupiah(r.jumlah)}</td></tr>`
-
-    el.innerHTML = `
-      <table class="admin-table">
-        <tbody>
-          <tr class="font-semibold"><td colspan="2" class="pt-3">Pendapatan</td></tr>
-          ${pendapatan.map(baris).join('') || '<tr><td colspan="2" class="text-xs text-charcoal-400">Tidak ada data</td></tr>'}
-          ${kontraPendapatan.map(r => `<tr><td class="text-xs text-charcoal-400">(-) ${r.kode_akun} — ${escapeHtml(r.nama_akun)}</td><td class="text-right text-xs text-charcoal-400">(${formatRupiah(r.jumlah)})</td></tr>`).join('')}
-          <tr class="font-semibold border-t border-charcoal-200 dark:border-charcoal-700"><td>Pendapatan Bersih</td><td class="text-right">${formatRupiah(totalPendapatanBersih)}</td></tr>
-
-          <tr class="font-semibold"><td colspan="2" class="pt-4">Beban</td></tr>
-          ${beban.map(baris).join('') || '<tr><td colspan="2" class="text-xs text-charcoal-400">Belum ada data beban (menyusul tahap berikutnya)</td></tr>'}
-          <tr class="font-semibold border-t border-charcoal-200 dark:border-charcoal-700"><td>Total Beban</td><td class="text-right">${formatRupiah(totalBeban)}</td></tr>
-
-          <tr class="font-bold text-base border-t-2 border-charcoal-300 dark:border-charcoal-600">
-            <td class="pt-3">Laba/Rugi Bersih</td>
-            <td class="text-right pt-3 ${labaBersih >= 0 ? 'text-green-600' : 'text-red-500'}">${formatRupiah(labaBersih)}</td>
-          </tr>
-        </tbody>
-      </table>`
-  } catch (e) {
-    el.innerHTML = `<p class="text-center text-sm text-red-500 py-8">Gagal memuat laba rugi</p>`
-  }
-}
-
-// ══════════════════════════════════════════════════════════
-// LAPORAN — SUB: PENGATURAN PAJAK
-// ══════════════════════════════════════════════════════════
-
-function isiFormPajak() {
-  document.getElementById('pajak-pkp').checked = settingsCache.toko_pkp === 'true'
-  document.getElementById('pajak-tarif').value = settingsCache.tarif_ppn_persen || '11'
-}
-
-async function simpanPengaturanPajak(e) {
-  e.preventDefault()
-  try {
-    const pkp = document.getElementById('pajak-pkp').checked
-    const tarif = document.getElementById('pajak-tarif').value
-    await updateSetting('toko_pkp', pkp ? 'true' : 'false')
-    await updateSetting('tarif_ppn_persen', tarif)
-    settingsCache.toko_pkp = pkp ? 'true' : 'false'
-    settingsCache.tarif_ppn_persen = tarif
-    toast('Pengaturan pajak disimpan')
-  } catch (err) {
-    toast('Gagal menyimpan: ' + err.message, 'error')
-  }
-}
-
-// ══════════════════════════════════════════════════════════
-// TAB: STOK / INVENTARIS
-// ══════════════════════════════════════════════════════════
-
-async function loadStokTab() {
-  if (!stokSubTabsInit) {
-    stokSubTabsInit = true
-    const nav = document.querySelectorAll('#tab-stok .lap-subtab-btn')
-    nav.forEach(btn => {
-      btn.addEventListener('click', () => {
-        nav.forEach(b => b.classList.toggle('active', b === btn))
-        document.querySelectorAll('#tab-stok .stok-subpanel').forEach(p => p.classList.add('hidden'))
-        document.getElementById(`stok-sub-${btn.dataset.sub}`).classList.remove('hidden')
-        onShowStokSubTab(btn.dataset.sub)
-      })
-    })
-  }
-
-  document.getElementById('btn-catat-pergerakan').addEventListener('click', bukaFormPergerakanStok)
-  document.getElementById('btn-filter-kartustok').addEventListener('click', () => renderKartuStok(1))
-  document.getElementById('btn-tambah-gudang').addEventListener('click', bukaFormGudang)
-  document.getElementById('stok-cari').addEventListener('input', debounce(() => renderRingkasanStok(), 400))
-
-  await renderRingkasanStok()
-  await perbaruiBadgeApprovalStok()
-}
-
-let stokSubTabLoaded = new Set()
-
-function onShowStokSubTab(sub) {
-  if (stokSubTabLoaded.has(sub)) return
-  stokSubTabLoaded.add(sub)
-  if (sub === 'kartustok') { isiDropdownProdukStok(); renderKartuStok(1) }
-  if (sub === 'approval')  renderApprovalStok()
-  if (sub === 'gudang')    renderGudang()
-}
-
-async function perbaruiBadgeApprovalStok() {
-  try {
-    const list = await getPergerakanMenungguApproval()
-    const badge = document.getElementById('badge-stok-approval')
-    const badgeSidebar = document.getElementById('badge-stok')
-    if (list.length > 0) {
-      badge.textContent = list.length
-      badge.classList.remove('hidden')
-      badgeSidebar.textContent = list.length
-      badgeSidebar.classList.remove('hidden')
-    } else {
-      badge.classList.add('hidden')
-      badgeSidebar.classList.add('hidden')
-    }
-  } catch (e) { /* diamkan */ }
-}
-
-async function renderRingkasanStok() {
-  const search = document.getElementById('stok-cari').value.trim()
-  const tbl = document.getElementById('tbl-ringkasan-stok')
-  tbl.innerHTML = `<div class="animate-skeleton bg-charcoal-100 dark:bg-charcoal-800 h-48 rounded-2xl"></div>`
-
-  try {
-    const produk = await getProductsRingkas({ search })
-    if (!produk.length) {
-      tbl.innerHTML = `<p class="text-center text-sm text-charcoal-400 py-8">Tidak ada produk ditemukan</p>`
-      return
-    }
-    tbl.innerHTML = `
-      <div class="overflow-x-auto">
-      <table class="admin-table">
-        <thead><tr><th>Kode</th><th>Nama Produk</th><th>Stok Saat Ini</th><th></th></tr></thead>
-        <tbody>
-          ${produk.map(p => `<tr>
-            <td class="font-mono text-xs">${escapeHtml(p.kode_produk)}</td>
-            <td>${escapeHtml(p.nama)}</td>
-            <td class="font-semibold ${p.stok <= 0 ? 'text-red-500' : ''}">${p.stok}</td>
-            <td><button class="btn-riwayat-produk text-wood-600 text-xs" data-id="${p.id}">Riwayat</button></td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-      </div>`
-
-    tbl.querySelectorAll('.btn-riwayat-produk').forEach(btn =>
-      btn.addEventListener('click', () => {
-        document.querySelector('#tab-stok .lap-subtab-btn[data-sub="kartustok"]').click()
-        setTimeout(async () => {
-          await isiDropdownProdukStok()
-          document.getElementById('ks-produk').value = btn.dataset.id
-          renderKartuStok(1)
-        }, 50)
-      })
-    )
-  } catch (e) {
-    tbl.innerHTML = `<p class="text-center text-sm text-red-500 py-8">Gagal memuat ringkasan stok</p>`
-  }
-}
-
-async function isiDropdownProdukStok() {
-  const produk = await getProductsRingkas()
-  const sel = document.getElementById('ks-produk')
-  sel.innerHTML = `<option value="">Semua produk</option>` +
-    produk.map(p => `<option value="${p.id}">${escapeHtml(p.nama)}</option>`).join('')
-}
-
-async function renderKartuStok(page) {
-  const productId = document.getElementById('ks-produk').value || undefined
-  const tbl = document.getElementById('tbl-kartu-stok')
-  tbl.innerHTML = `<div class="animate-skeleton bg-charcoal-100 dark:bg-charcoal-800 h-48 rounded-2xl"></div>`
-
-  const TIPE_LABEL = {
-    masuk_pembelian: 'Pembelian Masuk', masuk_penyesuaian: 'Penyesuaian (+)',
-    retur_masuk_pembeli: 'Retur dari Pembeli', keluar_penjualan: 'Penjualan',
-    keluar_penyesuaian: 'Penyesuaian (-)', retur_keluar_supplier: 'Retur ke Supplier',
-    rusak_hilang: 'Rusak/Hilang',
-  }
-  const STATUS_LABEL = { menunggu_approval: 'Menunggu Approval', disetujui: 'Disetujui', ditolak: 'Ditolak' }
-  const STATUS_CLS = { menunggu_approval: 'badge-amber', disetujui: 'badge-green', ditolak: 'badge-gray' }
-
-  try {
-    const { rows, totalPages } = await getKartuStok({ productId, page })
-    if (!rows.length) {
-      tbl.innerHTML = `<p class="text-center text-sm text-charcoal-400 py-8">Belum ada pergerakan stok</p>`
-      document.getElementById('paginasi-kartustok').innerHTML = ''
-      return
-    }
-    tbl.innerHTML = `
-      <div class="overflow-x-auto">
-      <table class="admin-table">
-        <thead><tr><th>Tanggal</th><th>Produk</th><th>Tipe</th><th>Arah</th><th>Qty</th><th>Nilai</th><th>Status</th><th>Keterangan</th></tr></thead>
-        <tbody>
-          ${rows.map(r => `<tr>
-            <td class="text-xs">${formatDatetime(r.created_at)}</td>
-            <td>${escapeHtml(r.nama_produk)}</td>
-            <td class="text-xs">${TIPE_LABEL[r.tipe] || r.tipe}</td>
-            <td>${r.arah === 'masuk' ? '<span class="text-green-600">Masuk</span>' : '<span class="text-red-500">Keluar</span>'}</td>
-            <td>${r.qty}</td>
-            <td class="text-xs">${r.hpp_total ? formatRupiah(r.hpp_total) : (r.harga_satuan ? formatRupiah(r.harga_satuan * r.qty) : '-')}</td>
-            <td><span class="badge ${STATUS_CLS[r.status]}">${STATUS_LABEL[r.status]}</span></td>
-            <td class="text-xs text-charcoal-400">${escapeHtml(r.keterangan || '')}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-      </div>`
-    renderSimplePagination('paginasi-kartustok', page, totalPages, (p) => renderKartuStok(p))
-  } catch (e) {
-    tbl.innerHTML = `<p class="text-center text-sm text-red-500 py-8">Gagal memuat kartu stok</p>`
-  }
-}
-
-async function renderApprovalStok() {
-  const tbl = document.getElementById('tbl-approval-stok')
-  tbl.innerHTML = `<div class="animate-skeleton bg-charcoal-100 dark:bg-charcoal-800 h-32 rounded-2xl"></div>`
-
-  try {
-    const list = await getPergerakanMenungguApproval()
-    if (!list.length) {
-      tbl.innerHTML = `<p class="text-center text-sm text-charcoal-400 py-8">Tidak ada pengajuan yang menunggu approval 🎉</p>`
-      return
-    }
-    tbl.innerHTML = `
-      <div class="overflow-x-auto">
-      <table class="admin-table">
-        <thead><tr><th>Tanggal</th><th>Produk</th><th>Qty</th><th>Keterangan</th><th>Diajukan Oleh</th><th></th></tr></thead>
-        <tbody>
-          ${list.map(r => `<tr>
-            <td class="text-xs">${formatDatetime(r.created_at)}</td>
-            <td>${escapeHtml(r.nama_produk)}</td>
-            <td>${r.qty}</td>
-            <td class="text-xs text-charcoal-400">${escapeHtml(r.keterangan || '')}</td>
-            <td class="text-xs">${escapeHtml(r.diajukan_oleh_nama || '-')}</td>
-            <td class="flex gap-2">
-              <button class="btn-approve-stok text-green-600 text-xs font-semibold" data-id="${r.id}">Setujui</button>
-              <button class="btn-reject-stok text-red-500 text-xs font-semibold" data-id="${r.id}">Tolak</button>
-            </td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-      </div>`
-
-    tbl.querySelectorAll('.btn-approve-stok').forEach(btn =>
-      btn.addEventListener('click', () => prosesApprovalStok(btn.dataset.id, true))
-    )
-    tbl.querySelectorAll('.btn-reject-stok').forEach(btn =>
-      btn.addEventListener('click', () => prosesApprovalStok(btn.dataset.id, false))
-    )
-  } catch (e) {
-    tbl.innerHTML = `<p class="text-center text-sm text-red-500 py-8">Gagal memuat daftar approval</p>`
-  }
-}
-
-async function prosesApprovalStok(movementId, setuju) {
-  const catatan = window.prompt(setuju ? 'Catatan approval (opsional):' : 'Alasan penolakan (opsional):', '') || null
-  try {
-    await setujuiPergerakanStok(movementId, setuju, catatan)
-    toast(setuju ? 'Disetujui — stok & jurnal kerugian sudah diproses' : 'Pengajuan ditolak')
-    await renderApprovalStok()
-    await perbaruiBadgeApprovalStok()
-    await renderRingkasanStok()
-  } catch (err) {
-    toast('Gagal memproses: ' + err.message, 'error')
-  }
-}
-
-async function renderGudang() {
-  const tbl = document.getElementById('tbl-gudang')
-  tbl.innerHTML = `<div class="animate-skeleton bg-charcoal-100 dark:bg-charcoal-800 h-32 rounded-2xl"></div>`
-  try {
-    const list = await getGudang()
-    tbl.innerHTML = `
-      <table class="admin-table">
-        <thead><tr><th>Kode</th><th>Nama Gudang</th><th>Alamat</th><th>Status</th></tr></thead>
-        <tbody>
-          ${list.map(g => `<tr>
-            <td class="font-mono text-xs">${escapeHtml(g.kode_gudang)}</td>
-            <td>${escapeHtml(g.nama_gudang)}</td>
-            <td class="text-xs text-charcoal-400">${escapeHtml(g.alamat || '-')}</td>
-            <td><span class="badge ${g.aktif ? 'badge-green' : 'badge-gray'}">${g.aktif ? 'Aktif' : 'Nonaktif'}</span></td>
-          </tr>`).join('')}
-        </tbody>
-      </table>`
-  } catch (e) {
-    tbl.innerHTML = `<p class="text-center text-sm text-red-500 py-8">Gagal memuat gudang</p>`
-  }
-}
-
-function bukaFormGudang() {
-  openModal('Tambah Gudang', `
-    <form id="form-gudang" class="space-y-4">
-      <div>
-        <label class="label text-xs">Kode Gudang</label>
-        <input type="text" id="gd-kode" required placeholder="GD-02" class="input-field w-full">
-      </div>
-      <div>
-        <label class="label text-xs">Nama Gudang</label>
-        <input type="text" id="gd-nama" required placeholder="Gudang Cabang Batu" class="input-field w-full">
-      </div>
-      <div>
-        <label class="label text-xs">Alamat</label>
-        <textarea id="gd-alamat" rows="2" class="input-field w-full"></textarea>
-      </div>
-      <div class="flex gap-3 pt-2">
-        <button type="button" onclick="closeModal()" class="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-charcoal-200 dark:border-charcoal-700">Batal</button>
-        <button type="submit" class="flex-1 btn-primary py-2.5 rounded-xl text-sm font-semibold">Simpan</button>
-      </div>
-    </form>
-  `)
-
-  document.getElementById('form-gudang').addEventListener('submit', async (e) => {
-    e.preventDefault()
-    try {
-      await upsertGudang({
-        kode_gudang: document.getElementById('gd-kode').value.trim(),
-        nama_gudang: document.getElementById('gd-nama').value.trim(),
-        alamat: document.getElementById('gd-alamat').value.trim() || null,
-      })
-      closeModal()
-      toast('Gudang ditambahkan')
-      renderGudang()
-    } catch (err) {
-      toast('Gagal menyimpan gudang: ' + err.message, 'error')
-    }
-  })
-}
-
-const TIPE_PERGERAKAN_OPTIONS = [
-  { value: 'masuk_pembelian',      label: 'Pembelian Stok Masuk (perlu harga satuan)' },
-  { value: 'masuk_penyesuaian',    label: 'Penyesuaian Stok Opname (surplus)' },
-  { value: 'retur_masuk_pembeli',  label: 'Retur dari Pembeli (balik ke stok)' },
-  { value: 'keluar_penyesuaian',   label: 'Penyesuaian Stok Opname (kurang)' },
-  { value: 'retur_keluar_supplier',label: 'Retur ke Supplier' },
-  { value: 'rusak_hilang',         label: 'Barang Rusak/Hilang (perlu approval)' },
-]
-
-async function bukaFormPergerakanStok() {
-  const produk = await getProductsRingkas()
-  const gudangList = await getGudang()
-
-  openModal('Catat Pergerakan Stok', `
-    <form id="form-pergerakan-stok" class="space-y-4">
-      <div>
-        <label class="label text-xs">Produk</label>
-        <select id="ps-produk" required class="input-field w-full">
-          <option value="">Pilih produk</option>
-          ${produk.map(p => `<option value="${p.id}">${escapeHtml(p.nama)} (stok: ${p.stok})</option>`).join('')}
-        </select>
-      </div>
-      <div>
-        <label class="label text-xs">Gudang</label>
-        <select id="ps-gudang" required class="input-field w-full">
-          ${gudangList.map(g => `<option value="${g.id}">${escapeHtml(g.nama_gudang)}</option>`).join('')}
-        </select>
-      </div>
-      <div>
-        <label class="label text-xs">Jenis Pergerakan</label>
-        <select id="ps-tipe" required class="input-field w-full">
-          ${TIPE_PERGERAKAN_OPTIONS.map(t => `<option value="${t.value}">${t.label}</option>`).join('')}
-        </select>
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="label text-xs">Qty</label>
-          <input type="number" id="ps-qty" min="1" required class="input-field w-full">
-        </div>
-        <div id="ps-harga-wrap">
-          <label class="label text-xs">Harga Satuan</label>
-          <input type="number" id="ps-harga" min="0" class="input-field w-full">
-        </div>
-      </div>
-      <div>
-        <label class="label text-xs">Keterangan</label>
-        <textarea id="ps-keterangan" rows="2" class="input-field w-full" placeholder="Mis. supplier, nomor faktur, alasan, dll"></textarea>
-      </div>
-      <p id="ps-error" class="text-red-500 text-xs hidden"></p>
-      <div class="flex gap-3 pt-2">
-        <button type="button" onclick="closeModal()" class="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-charcoal-200 dark:border-charcoal-700">Batal</button>
-        <button type="submit" class="flex-1 btn-primary py-2.5 rounded-xl text-sm font-semibold">Simpan</button>
-      </div>
-    </form>
-  `)
-
-  const tipeSel = document.getElementById('ps-tipe')
-  const hargaWrap = document.getElementById('ps-harga-wrap')
-  const toggleHarga = () => { hargaWrap.style.display = tipeSel.value === 'masuk_pembelian' ? '' : 'none' }
-  tipeSel.addEventListener('change', toggleHarga)
-  toggleHarga()
-
-  document.getElementById('form-pergerakan-stok').addEventListener('submit', async (e) => {
-    e.preventDefault()
-    const errEl = document.getElementById('ps-error')
-    errEl.classList.add('hidden')
-    const tipe = tipeSel.value
-
-    try {
-      const id = await catatPergerakanStok({
-        productId: document.getElementById('ps-produk').value,
-        gudangId: document.getElementById('ps-gudang').value,
-        tipe,
-        qty: Number(document.getElementById('ps-qty').value),
-        hargaSatuan: tipe === 'masuk_pembelian' ? Number(document.getElementById('ps-harga').value) : null,
-        keterangan: document.getElementById('ps-keterangan').value.trim() || null,
-      })
-      closeModal()
-      toast(tipe === 'rusak_hilang' ? 'Pengajuan tercatat, menunggu approval' : 'Pergerakan stok berhasil dicatat')
-      stokSubTabLoaded.delete('kartustok')
-      stokSubTabLoaded.delete('approval')
-      await renderRingkasanStok()
-      await perbaruiBadgeApprovalStok()
-    } catch (err) {
-      errEl.textContent = err.message
-      errEl.classList.remove('hidden')
-    }
-  })
-}
-
-let percakapanAktifId = null
-let percakapanCache   = []
-
-async function loadLiveChatTab() {
-  document.getElementById('filter-status-livechat').addEventListener('change', renderDaftarPercakapan)
-  document.getElementById('livechat-status').addEventListener('change', ubahStatusPercakapanAktif)
-  document.getElementById('form-livechat-reply').addEventListener('submit', kirimBalasanCS)
-
-  await renderDaftarPercakapan()
-  await perbaruiBadgeLivechat()
-  mulaiRealtimeChatJikaBelum()
-}
-
-function mulaiRealtimeChatJikaBelum() {
-  if (unsubChatRealtime) return
-  unsubChatRealtime = subscribeSemuaPercakapan(async () => {
-    await perbaruiBadgeLivechat()
-    // Refresh list & (kalau sedang dibuka) thread aktif supaya realtime terasa "hidup"
-    if (loadedTabs.has('livechat')) await renderDaftarPercakapan()
-    if (percakapanAktifId) await renderThreadPercakapan(percakapanAktifId, { scrollBottom: true })
-  })
-}
-
-async function perbaruiBadgeLivechat() {
-  try {
-    const jumlah = await hitungPesanBelumDibaca()
-    const badge = document.getElementById('badge-livechat')
-    if (jumlah > 0) {
-      badge.textContent = jumlah > 99 ? '99+' : jumlah
-      badge.classList.remove('hidden')
-    } else {
-      badge.classList.add('hidden')
-    }
-  } catch (e) {
-    console.error('Gagal memuat jumlah pesan belum dibaca:', e)
-  }
-}
-
-async function renderDaftarPercakapan() {
-  const status = document.getElementById('filter-status-livechat').value || undefined
-  const listEl = document.getElementById('list-percakapan')
-
-  try {
-    percakapanCache = await getPercakapanCS({ status })
-  } catch (e) {
-    listEl.innerHTML = `<p class="text-xs text-red-500 p-4">Gagal memuat percakapan</p>`
-    return
-  }
-
-  if (!percakapanCache.length) {
-    listEl.innerHTML = `<p class="text-xs text-charcoal-400 p-4 text-center">Belum ada percakapan</p>`
-    return
-  }
-
-  const STATUS_DOT = { terbuka: 'bg-red-500', ditangani: 'bg-amber-500', selesai: 'bg-charcoal-300 dark:bg-charcoal-600' }
-
-  listEl.innerHTML = percakapanCache.map(p => `
-    <button class="btn-percakapan w-full text-left p-3 hover:bg-charcoal-50 dark:hover:bg-charcoal-800 transition ${p.id === percakapanAktifId ? 'bg-wood-50 dark:bg-wood-900/20' : ''}"
-      data-id="${p.id}">
-      <div class="flex items-center gap-2">
-        <span class="w-2 h-2 rounded-full flex-shrink-0 ${STATUS_DOT[p.status] || 'bg-charcoal-300'}"></span>
-        <p class="text-sm font-medium truncate flex-1">${escapeHtml(p.nama_pembeli)}</p>
-      </div>
-      <p class="text-[11px] text-charcoal-400 mt-1">${formatDatetime(p.last_message_at)}</p>
-    </button>
-  `).join('')
-
-  listEl.querySelectorAll('.btn-percakapan').forEach(btn =>
-    btn.addEventListener('click', () => bukaPercakapan(btn.dataset.id))
-  )
-}
-
-async function bukaPercakapan(id) {
-  percakapanAktifId = id
-  document.getElementById('livechat-empty').classList.add('hidden')
-  document.getElementById('livechat-thread').classList.remove('hidden')
-
-  document.querySelectorAll('.btn-percakapan').forEach(b =>
-    b.classList.toggle('bg-wood-50', b.dataset.id === id)
-  )
-
-  const p = percakapanCache.find(x => x.id === id)
-  if (p) {
-    document.getElementById('livechat-nama').textContent = p.nama_pembeli
-    document.getElementById('livechat-wa').textContent = p.nomor_wa || '—'
-    document.getElementById('livechat-status').value = p.status
-  }
-
-  await renderThreadPercakapan(id, { scrollBottom: true })
-
-  try {
-    await tandaiPesanDibacaCS(id)
-    await perbaruiBadgeLivechat()
-  } catch (e) {
-    console.error('Gagal menandai pesan terbaca:', e)
-  }
-}
-
-async function renderThreadPercakapan(id, { scrollBottom = false } = {}) {
-  if (id !== percakapanAktifId) return
-  const messagesEl = document.getElementById('livechat-messages')
-
-  let pesan = []
-  try {
-    pesan = await getPesanPercakapan(id)
-  } catch (e) {
-    messagesEl.innerHTML = `<p class="text-xs text-red-500">Gagal memuat pesan</p>`
-    return
-  }
-
-  messagesEl.innerHTML = pesan.map(m => `
-    <div class="flex flex-col ${m.pengirim === 'cs' ? 'items-end' : 'items-start'}">
-      <div class="max-w-[75%] rounded-2xl px-3 py-2 text-sm ${
-        m.pengirim === 'cs'
-          ? 'bg-wood-600 text-white rounded-tr-none'
-          : 'bg-charcoal-100 dark:bg-charcoal-700 rounded-tl-none'
-      }">${escapeHtml(m.isi)}</div>
-      <span class="text-[10px] text-charcoal-400 mt-0.5">${m.pengirim === 'cs' ? (m.pengirim_nama || 'CS') : m.pengirim_nama} · ${formatDatetime(m.created_at)}</span>
-    </div>
-  `).join('')
-
-  if (scrollBottom) messagesEl.scrollTop = messagesEl.scrollHeight
-}
-
-async function kirimBalasanCS(e) {
-  e.preventDefault()
-  if (!percakapanAktifId) return
-
-  const input = document.getElementById('livechat-input')
-  const isi = input.value.trim()
-  if (!isi) return
-
-  input.value = ''
-  input.disabled = true
-
-  try {
-    await kirimPesanCS(percakapanAktifId, isi, currentUser.profile.nama_lengkap)
-    // Kalau masih 'terbuka', otomatis pindah ke 'ditangani' saat CS pertama kali membalas
-    const p = percakapanCache.find(x => x.id === percakapanAktifId)
-    if (p && p.status === 'terbuka') {
-      await updateStatusPercakapan(percakapanAktifId, 'ditangani', currentUser.user.id)
-      document.getElementById('livechat-status').value = 'ditangani'
-    }
-    await renderThreadPercakapan(percakapanAktifId, { scrollBottom: true })
-  } catch (err) {
-    toast('Gagal mengirim balasan: ' + err.message, 'error')
-  } finally {
-    input.disabled = false
-    input.focus()
-  }
-}
-
-async function ubahStatusPercakapanAktif(e) {
-  if (!percakapanAktifId) return
-  const status = e.target.value
-  try {
-    await updateStatusPercakapan(percakapanAktifId, status, currentUser.user.id)
-    toast('Status percakapan diperbarui')
-    await renderDaftarPercakapan()
-  } catch (err) {
-    toast('Gagal mengubah status: ' + err.message, 'error')
   }
 }
