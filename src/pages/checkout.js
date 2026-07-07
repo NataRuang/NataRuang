@@ -2,7 +2,8 @@
 import { getShippingByKota, createOrder, createPayment, getSettings } from '@/lib/api.js'
 import {
   getCart, clearCart, cartTotal, formatRupiah,
-  validateWA, normalizeWA, escapeHtml, toast, initDarkMode, debounce
+  validateWA, normalizeWA, escapeHtml, toast, initDarkMode, debounce,
+  buatLinkWA
 } from '@/lib/utils.js'
 
 initDarkMode()
@@ -212,6 +213,10 @@ async function handleCheckout() {
   btnLabel.textContent = 'Memproses...'
   btnSpinner.classList.remove('hidden')
 
+  // Buka tab kosong LEBIH DULU (masih dalam alur klik pengguna) supaya
+  // tidak diblokir popup blocker browser setelah proses async di bawah selesai.
+  const waTab = window.open('', '_blank')
+
   try {
     const ongkir  = ongkirDipilih.harga
     const total   = subtotal + ongkir
@@ -242,6 +247,18 @@ async function handleCheckout() {
     // Buat record pembayaran
     await createPayment(order.id, f.metode_bayar)
 
+    // Arahkan tab WA ke chat admin dengan ringkasan pesanan otomatis terisi
+    const nomorAdmin = settings.nomor_wa
+    if (nomorAdmin) {
+      const linkWA = buatLinkWA(nomorAdmin, buatPesanOrderWA(order, f, total))
+      if (waTab) waTab.location.href = linkWA
+      else window.open(linkWA, '_blank', 'noopener')
+    } else {
+      // Admin belum isi nomor WA di /admin.html → Pengaturan
+      if (waTab) waTab.close()
+      toast('Nomor WhatsApp toko belum dikonfigurasi admin', 'warning')
+    }
+
     // Kosongkan keranjang
     clearCart()
 
@@ -249,10 +266,38 @@ async function handleCheckout() {
     window.location.href = `/status.html?invoice=${order.invoice_number}`
 
   } catch (e) {
+    if (waTab) waTab.close()
     console.error('Checkout error:', e)
     toast('Gagal membuat pesanan: ' + (e.message || 'Coba lagi'), 'error')
     btn.disabled = false
-    btnLabel.textContent = 'Buat Pesanan'
+    btnLabel.textContent = 'Buat Pesanan & Konfirmasi via WhatsApp'
     btnSpinner.classList.add('hidden')
   }
+}
+
+// ── Pesan WhatsApp ringkasan pesanan ────────────────────────
+
+function buatPesanOrderWA(order, f, total) {
+  const daftarProduk = cart
+    .map(i => `• ${i.nama} (${i.qty}x) — ${formatRupiah(i.harga * i.qty)}`)
+    .join('\n')
+
+  const alamatLengkap = [f.alamat, f.kelurahan, f.kecamatan, f.kota, f.provinsi, f.kode_pos]
+    .filter(Boolean).join(', ')
+
+  const ongkirTeks = ongkirDipilih.harga > 0
+    ? formatRupiah(ongkirDipilih.harga)
+    : 'Dikonfirmasi admin'
+
+  return `Halo Admin NataRuang, saya ingin konfirmasi pesanan baru:\n\n` +
+    `*No. Invoice:* ${order.invoice_number}\n` +
+    `*Nama:* ${f.nama}\n\n` +
+    `*Produk:*\n${daftarProduk}\n\n` +
+    `Subtotal: ${formatRupiah(subtotal)}\n` +
+    `Ongkir (${ongkirDipilih.ekspedisi}): ${ongkirTeks}\n` +
+    `*Total: ${formatRupiah(total)}*\n\n` +
+    `*Alamat Pengiriman:*\n${alamatLengkap}\n\n` +
+    `Metode Bayar: ${f.metode_bayar === 'transfer_bank' ? 'Transfer Bank' : 'QRIS'}\n` +
+    (f.catatan ? `Catatan: ${f.catatan}\n\n` : '\n') +
+    `Mohon konfirmasi dan info langkah selanjutnya ya. Terima kasih 🙏`
 }
