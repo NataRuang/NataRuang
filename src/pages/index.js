@@ -3,17 +3,16 @@
 
 import {
   getCategories, getProducts, getTestimonials,
-  getSettings, getFaqs, getProdukTerlaris, logProductView,
-  buatPercakapan, getPercakapanByToken, getPesanPercakapan,
-  kirimPesanPembeli, subscribePesanBaru
+  getSettings, getFaqs, getProdukTerlaris, logProductView
 } from '@/lib/api.js'
 import {
   formatRupiah, toast, initDarkMode, toggleDarkMode,
   getCart, cartCount, cartTotal, addToCart,
   updateCartQty, removeFromCart,
-  buatLinkWA, waKonteksProduk, escapeHtml, getSessionId, getVisitorToken
+  buatLinkWA, waKonteksProduk, escapeHtml, getSessionId
 } from '@/lib/utils.js'
 import { cariJawaban, getQuickReplies, pesanSambutan, linkWAEskalasi } from '@/lib/chatbot.js'
+import { supabase } from '@/lib/supabase.js'
 
 // ── Inisialisasi ───────────────────────────────────────────
 
@@ -40,8 +39,36 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initChatbot()
   initCart()
+  initOnlineVisitors()
   document.getElementById('footer-year').textContent = new Date().getFullYear()
 })
+
+// ── Pengunjung Online (Supabase Realtime Presence) ──────────
+// Tidak menyentuh tabel apapun — murni presence channel sementara,
+// gratis dan otomatis hilang saat tab ditutup.
+
+function initOnlineVisitors() {
+  const badge = document.getElementById('online-visitors-badge')
+  const countEl = document.getElementById('online-visitors-count')
+
+  const channel = supabase.channel('online_visitors', {
+    config: { presence: { key: getSessionId() } }
+  })
+
+  channel
+    .on('presence', { event: 'sync' }, () => {
+      const state = channel.presenceState()
+      const jumlah = Math.max(Object.keys(state).length, 1)
+      countEl.textContent = jumlah
+      badge.classList.remove('hidden')
+      badge.classList.add('flex')
+    })
+    .subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await channel.track({ online_at: new Date().toISOString() })
+      }
+    })
+}
 
 // ── Settings ───────────────────────────────────────────────
 
@@ -405,11 +432,6 @@ function initChatbot() {
   const quickR   = document.getElementById('chatbot-quickreply')
   let   opened   = false
 
-  // ── Live chat CS (state) ──
-  let liveMode = false
-  let liveConversationId = null
-  let unsubLive = null
-
   const appendMsg = (teks, from = 'bot') => {
     const el = document.createElement('div')
     el.className = from === 'bot'
@@ -419,44 +441,6 @@ function initChatbot() {
     el.textContent = teks
     messages.appendChild(el)
     messages.scrollTop = messages.scrollHeight
-  }
-
-  const langgananLiveChat = () => {
-    if (unsubLive) unsubLive()
-    unsubLive = subscribePesanBaru(liveConversationId, (msg) => {
-      // Abaikan echo pesan pembeli sendiri (sudah tampil duluan saat dikirim)
-      if (msg.pengirim === 'cs') appendMsg(msg.isi, 'bot')
-    })
-  }
-
-  const cobaLanjutkanLiveChat = async () => {
-    try {
-      const existing = await getPercakapanByToken(getVisitorToken())
-      if (existing && existing.status !== 'selesai') {
-        liveConversationId = existing.id
-        liveMode = true
-      }
-    } catch {
-      // Diamkan — biarkan tetap mode FAQ bot kalau gagal cek
-    }
-  }
-
-  const mulaiLiveChatBaru = async () => {
-    const namaSebelumnya = localStorage.getItem('fs_visitor_name') || ''
-    const nama = (window.prompt('Siapa nama Anda? (supaya CS kami tahu harus memanggil siapa)', namaSebelumnya) || '').trim()
-    if (!nama) return // dibatalkan
-    localStorage.setItem('fs_visitor_name', nama)
-
-    try {
-      const conv = await buatPercakapan({ visitor_token: getVisitorToken(), nama_pembeli: nama })
-      liveConversationId = conv.id
-      liveMode = true
-      quickR.innerHTML = ''
-      appendMsg(`Halo ${nama}, Anda sekarang terhubung dengan CS kami. Silakan tulis pertanyaan Anda ya, tim kami akan segera membalas 😊`, 'bot')
-      langgananLiveChat()
-    } catch {
-      appendMsg('Maaf, live chat sedang tidak bisa diakses. Silakan hubungi kami via WhatsApp.', 'bot')
-    }
   }
 
   const renderQuickReplies = async () => {
@@ -478,20 +462,6 @@ function initChatbot() {
     input.value = ''
     quickR.innerHTML = ''
 
-    // ── Mode live chat: kirim langsung ke CS, tidak lewat FAQ bot ──
-    if (liveMode) {
-      try {
-        await kirimPesanPembeli(
-          liveConversationId,
-          teks.trim(),
-          localStorage.getItem('fs_visitor_name') || 'Pengunjung'
-        )
-      } catch {
-        appendMsg('Pesan gagal terkirim, coba lagi ya.', 'bot')
-      }
-      return
-    }
-
     // Typing indicator
     const typing = document.createElement('div')
     typing.className = 'text-xs text-charcoal-400 ml-1'
@@ -505,7 +475,7 @@ function initChatbot() {
       if (jawaban) {
         appendMsg(jawaban, 'bot')
       } else {
-        appendMsg('Maaf, saya belum bisa menjawab pertanyaan itu. Silakan tekan "Chat langsung dengan CS kami" di bawah, atau lanjut via WhatsApp 😊', 'bot')
+        appendMsg('Maaf, saya belum bisa menjawab pertanyaan itu. Silakan lanjutkan via WhatsApp ya 😊', 'bot')
       }
     } catch {
       typing.remove()
@@ -519,22 +489,8 @@ function initChatbot() {
     if (opened && !messages.children.length) {
       messages.style.display = 'flex'
       messages.style.flexDirection = 'column'
-
-      await cobaLanjutkanLiveChat()
-
-      if (liveMode) {
-        appendMsg('Anda sedang terhubung dengan CS kami.', 'bot')
-        try {
-          const riwayat = await getPesanPercakapan(liveConversationId)
-          riwayat.forEach(m => appendMsg(m.isi, m.pengirim === 'cs' ? 'bot' : 'user'))
-        } catch {
-          // Riwayat gagal dimuat, tetap lanjut mode live tanpa histori
-        }
-        langgananLiveChat()
-      } else {
-        appendMsg(pesanSambutan(), 'bot')
-        await renderQuickReplies()
-      }
+      appendMsg(pesanSambutan(), 'bot')
+      await renderQuickReplies()
     }
   })
 
@@ -545,11 +501,6 @@ function initChatbot() {
 
   document.getElementById('btn-chatbot-send').addEventListener('click', () => handleSend(input.value))
   input.addEventListener('keydown', e => { if (e.key === 'Enter') handleSend(input.value) })
-
-  document.getElementById('btn-chatbot-livecs').addEventListener('click', async () => {
-    if (liveMode) { toast('Anda sudah terhubung dengan CS kami'); return }
-    await mulaiLiveChatBaru()
-  })
 
   document.getElementById('btn-chatbot-wa').addEventListener('click', () => {
     const wa = settings.nomor_wa || import.meta.env.VITE_NOMOR_WA || ''
