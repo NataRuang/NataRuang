@@ -134,6 +134,16 @@
       <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div class="max-w-2xl animate-fade-in">
           <p class="text-wood-400 text-sm font-medium uppercase tracking-widest mb-3">Koleksi Terbaru 2026 · Malang Raya</p>
+
+          <!-- Badge pengunjung online (realtime) -->
+          <div id="online-visitors-badge" class="hidden items-center gap-2 text-white/90 text-xs sm:text-sm mb-4 w-fit bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/20">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            </span>
+            <span><span id="online-visitors-count">1</span> orang sedang melihat NataRuang sekarang</span>
+          </div>
+
           <h1 id="hero-title" class="font-serif text-4xl md:text-6xl font-semibold text-white leading-tight mb-5">
             Wujudkan Rumah<br>Impian Anda
           </h1>
@@ -361,10 +371,8 @@
           </div>
         </div>
       </div>
-      <div class="border-t border-charcoal-800 pt-6 flex flex-col sm:flex-row items-center justify-center gap-2 text-center text-xs">
+      <div class="border-t border-charcoal-800 pt-6 text-center text-xs">
         <p>&copy; <span id="footer-year"></span> NataRuang. Hak cipta dilindungi.</p>
-        <span class="hidden sm:inline">&middot;</span>
-        <a href="/login.html" class="hover:text-white transition">Staff Login</a>
       </div>
     </div>
   </footer>
@@ -414,13 +422,6 @@
             </svg>
           </button>
         </div>
-        <!-- Live chat CS -->
-        <button id="btn-chatbot-livecs" class="mt-2 w-full text-xs text-wood-600 hover:text-wood-700 flex items-center justify-center gap-1 transition">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-          </svg>
-          Chat langsung dengan CS kami
-        </button>
         <!-- WA eskalasi -->
         <button id="btn-chatbot-wa" class="mt-2 w-full text-xs text-green-600 hover:text-green-700 flex items-center justify-center gap-1 transition">
           <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
