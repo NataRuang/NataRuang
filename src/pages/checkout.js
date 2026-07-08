@@ -1,5 +1,5 @@
 // src/pages/checkout.js
-import { getShippingByKota, createOrder, createPayment, getSettings } from '@/lib/api.js'
+import { getShippingByKota, createOrder, createPayment, getSettings, cekStatusMember } from '@/lib/api.js'
 import {
   getCart, clearCart, cartTotal, formatRupiah,
   validateWA, normalizeWA, escapeHtml, toast, initDarkMode, debounce,
@@ -12,6 +12,7 @@ let cart       = []
 let settings   = {}
 let ongkirDipilih = null   // { id, ekspedisi, harga, estimasi_durasi }
 let subtotal   = 0
+let statusMember = null    // hasil cek_status_member (null = belum dicek)
 
 // ── Init ───────────────────────────────────────────────────
 
@@ -33,8 +34,44 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('btn-cek-ongkir').addEventListener('click', cekOngkir)
   document.getElementById('kota').addEventListener('input', debounce(cekOngkir, 600))
+  document.getElementById('nomor_wa').addEventListener('input', debounce(cekMember, 700))
   document.getElementById('btn-pesan').addEventListener('click', handleCheckout)
 })
+
+// ── Cek status member otomatis ──────────────────────────────
+
+async function cekMember() {
+  const nomor = document.getElementById('nomor_wa').value.trim()
+  const box   = document.getElementById('member-status')
+
+  if (!validateWA(nomor)) {
+    statusMember = null
+    box.classList.add('hidden')
+    updateTotals()
+    return
+  }
+
+  try {
+    statusMember = await cekStatusMember(normalizeWA(nomor))
+    box.classList.remove('hidden')
+
+    if (statusMember.is_member) {
+      box.className = 'mt-2 text-xs px-3 py-2 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+      box.innerHTML = `🎉 <strong>Anda member NataRuang!</strong> Diskon ${statusMember.diskon_persen}% otomatis diterapkan pada pesanan ini.`
+    } else {
+      const sisaTransaksi = Math.max(statusMember.syarat_transaksi - statusMember.total_transaksi, 0)
+      const sisaProduk    = Math.max(statusMember.syarat_produk - statusMember.total_produk_unik, 0)
+      box.className = 'mt-2 text-xs px-3 py-2 rounded-xl bg-charcoal-50 dark:bg-charcoal-800 text-charcoal-500 dark:text-charcoal-400'
+      box.innerHTML = `Belum member. ${Math.min(sisaTransaksi, sisaProduk)} transaksi/jenis produk lagi untuk dapat diskon member otomatis.`
+    }
+  } catch (e) {
+    console.error('Gagal cek status member:', e)
+    statusMember = null
+    box.classList.add('hidden')
+  }
+
+  updateTotals()
+}
 
 // ── Render ringkasan ───────────────────────────────────────
 
@@ -58,14 +95,32 @@ function renderSummary() {
   updateTotals()
 }
 
+function diskonMemberRupiah() {
+  if (!statusMember?.is_member) return 0
+  return Math.round(subtotal * (statusMember.diskon_persen / 100))
+}
+
 function updateTotals() {
   const ongkir = ongkirDipilih?.harga || 0
+  const diskonMember = diskonMemberRupiah()
+
   document.getElementById('sum-subtotal').textContent = formatRupiah(subtotal)
   document.getElementById('sum-ongkir').textContent   = ongkirDipilih
     ? formatRupiah(ongkir) : 'Belum dipilih'
   document.getElementById('sum-ongkir').className = ongkirDipilih
     ? 'font-medium' : 'text-charcoal-400'
-  document.getElementById('sum-total').textContent = formatRupiah(subtotal + ongkir)
+
+  const diskonRow = document.getElementById('sum-diskon-member-row')
+  if (diskonMember > 0) {
+    diskonRow.classList.remove('hidden')
+    diskonRow.classList.add('flex')
+    document.getElementById('sum-diskon-member').textContent = '-' + formatRupiah(diskonMember)
+  } else {
+    diskonRow.classList.add('hidden')
+    diskonRow.classList.remove('flex')
+  }
+
+  document.getElementById('sum-total').textContent = formatRupiah(subtotal + ongkir - diskonMember)
 }
 
 // ── Cek Ongkir ─────────────────────────────────────────────
@@ -219,8 +274,17 @@ async function handleCheckout() {
 
   try {
     const ongkir  = ongkirDipilih.harga
-    const total   = subtotal + ongkir
     const wa      = normalizeWA(f.nomor_wa)
+
+    // Cek ulang status member langsung ke server (sumber kebenaran terakhir,
+    // bukan cache UI) supaya diskon yang diterapkan selalu sesuai nomor WA final.
+    let statusFinal = null
+    try { statusFinal = await cekStatusMember(wa) } catch { /* biarkan tanpa diskon kalau gagal cek */ }
+
+    const diskonMember = statusFinal?.is_member
+      ? Math.round(subtotal * (statusFinal.diskon_persen / 100))
+      : 0
+    const total = subtotal + ongkir - diskonMember
 
     // Buat order (trigger PostgreSQL generate invoice_number)
     const order = await createOrder({
@@ -239,7 +303,8 @@ async function handleCheckout() {
       ekspedisi:         ongkirDipilih.ekspedisi,
       ongkir:            ongkir,
       subtotal:          subtotal,
-      diskon_voucher:    0,
+      diskon_voucher:    diskonMember,
+      voucher_code:      diskonMember > 0 ? 'MEMBER-OTOMATIS' : null,
       total:             total,
       status:            'menunggu_pembayaran'
     }, cart)
@@ -250,7 +315,7 @@ async function handleCheckout() {
     // Arahkan tab WA ke chat admin dengan ringkasan pesanan otomatis terisi
     const nomorAdmin = settings.nomor_wa
     if (nomorAdmin) {
-      const linkWA = buatLinkWA(nomorAdmin, buatPesanOrderWA(order, f, total))
+      const linkWA = buatLinkWA(nomorAdmin, buatPesanOrderWA(order, f, total, diskonMember))
       if (waTab) waTab.location.href = linkWA
       else window.open(linkWA, '_blank', 'noopener')
     } else {
@@ -277,7 +342,7 @@ async function handleCheckout() {
 
 // ── Pesan WhatsApp ringkasan pesanan ────────────────────────
 
-function buatPesanOrderWA(order, f, total) {
+function buatPesanOrderWA(order, f, total, diskonMember) {
   const daftarProduk = cart
     .map(i => `• ${i.nama} (${i.qty}x) — ${formatRupiah(i.harga * i.qty)}`)
     .join('\n')
@@ -295,6 +360,7 @@ function buatPesanOrderWA(order, f, total) {
     `*Produk:*\n${daftarProduk}\n\n` +
     `Subtotal: ${formatRupiah(subtotal)}\n` +
     `Ongkir (${ongkirDipilih.ekspedisi}): ${ongkirTeks}\n` +
+    (diskonMember > 0 ? `Diskon Member: -${formatRupiah(diskonMember)}\n` : '') +
     `*Total: ${formatRupiah(total)}*\n\n` +
     `*Alamat Pengiriman:*\n${alamatLengkap}\n\n` +
     `Metode Bayar: ${f.metode_bayar === 'transfer_bank' ? 'Transfer Bank' : 'QRIS'}\n` +

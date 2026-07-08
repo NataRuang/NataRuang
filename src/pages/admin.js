@@ -1071,7 +1071,10 @@ const SETTINGS_FIELDS = {
   member_benefit_1: { label: 'Manfaat Member #1', group: 'Program Member' },
   member_benefit_2: { label: 'Manfaat Member #2', group: 'Program Member' },
   member_benefit_3: { label: 'Manfaat Member #3', group: 'Program Member' },
-  member_benefit_4: { label: 'Manfaat Member #4', group: 'Program Member' }
+  member_benefit_4: { label: 'Manfaat Member #4', group: 'Program Member' },
+  member_syarat_transaksi: { label: 'Syarat: Minimal Jumlah Transaksi Berhasil', type: 'number', group: 'Program Member' },
+  member_syarat_produk:    { label: 'Syarat: Minimal Jenis Produk Berbeda Dibeli', type: 'number', group: 'Program Member' },
+  member_diskon_persen:    { label: 'Diskon Otomatis untuk Member (%)', type: 'number', group: 'Program Member' }
 }
 
 function fieldInputHtml(key, field, value) {
@@ -1085,6 +1088,9 @@ function fieldInputHtml(key, field, value) {
   }
   if (field.type === 'datetime-local') {
     return `<input type="datetime-local" data-key="${key}" class="input-field setting-input" value="${escapeHtml(value)}">`
+  }
+  if (field.type === 'number') {
+    return `<input type="number" min="0" data-key="${key}" class="input-field setting-input" value="${escapeHtml(value)}">`
   }
   return `<input data-key="${key}" class="input-field setting-input" value="${escapeHtml(value)}">`
 }

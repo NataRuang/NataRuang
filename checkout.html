@@ -70,6 +70,7 @@
               <label class="label" for="nomor_wa">Nomor WhatsApp <span class="text-red-500">*</span></label>
               <input id="nomor_wa" type="tel" class="input-field w-full" placeholder="08xxxxxxxxxx" required>
               <p class="text-xs text-charcoal-400 mt-1">Info pesanan dikirim ke nomor ini</p>
+              <div id="member-status" class="hidden mt-2 text-xs px-3 py-2 rounded-xl"></div>
             </div>
             <div>
               <label class="label" for="email">Email <span class="text-charcoal-400 font-normal">(opsional)</span></label>
@@ -201,6 +202,10 @@
             <div class="flex justify-between">
               <span class="text-charcoal-500">Ongkos kirim</span>
               <span id="sum-ongkir" class="text-charcoal-400">Belum dipilih</span>
+            </div>
+            <div id="sum-diskon-member-row" class="hidden justify-between text-green-600">
+              <span>Diskon Member</span>
+              <span id="sum-diskon-member">-Rp 0</span>
             </div>
             <div class="flex justify-between font-semibold text-base pt-2 border-t border-charcoal-100 dark:border-charcoal-800">
               <span>Total</span>

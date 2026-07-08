@@ -110,9 +110,95 @@ async function loadSettings() {
         class="w-8 h-8 bg-charcoal-800 hover:bg-wood-600 text-charcoal-300 hover:text-white rounded-lg flex items-center justify-center text-xs font-bold transition">${l.icon}</a>`)
       .join('')
 
+    renderPromoSection()
+    renderMemberSection()
+
   } catch (e) {
     console.error('Gagal load settings:', e)
   }
+}
+
+// ── Promo / Flash Sale (dikontrol dari admin → Pengaturan) ──
+
+function renderPromoSection() {
+  if (settings.promo_aktif !== 'true' || !settings.promo_judul) return
+
+  const section = document.getElementById('promo-section')
+  document.getElementById('promo-judul').textContent = settings.promo_judul
+  document.getElementById('promo-teks').textContent  = settings.promo_teks || ''
+  document.getElementById('promo-cta').href = settings.promo_link || '/produk.html'
+
+  if (settings.promo_berakhir) {
+    const berakhir = mulaiCountdownPromo(settings.promo_berakhir)
+    if (!berakhir) return // waktu sudah lewat, jangan tampilkan promo basi
+  }
+
+  section.classList.remove('hidden')
+}
+
+function mulaiCountdownPromo(targetIso) {
+  const el     = document.getElementById('promo-countdown')
+  const target = new Date(targetIso).getTime()
+  if (isNaN(target) || target <= Date.now()) return false
+
+  const unit = [
+    ['d', 86400000, 'Hari'],
+    ['h', 3600000,  'Jam'],
+    ['m', 60000,    'Menit'],
+    ['s', 1000,     'Detik']
+  ]
+
+  const tick = () => {
+    let sisa = target - Date.now()
+    if (sisa <= 0) {
+      el.innerHTML = `<p class="text-white text-sm font-medium">Promo telah berakhir</p>`
+      document.getElementById('promo-section').classList.add('hidden')
+      clearInterval(timer)
+      return
+    }
+    el.innerHTML = unit.map(([key, ms, label]) => {
+      const val = Math.floor(sisa / ms)
+      sisa -= val * ms
+      return `
+        <div class="bg-white/15 rounded-xl px-3 py-2 min-w-[52px] text-center">
+          <p class="text-lg sm:text-xl font-bold text-white leading-none">${String(val).padStart(2, '0')}</p>
+          <p class="text-[9px] uppercase tracking-wide text-wood-100 mt-1">${label}</p>
+        </div>`
+    }).join('')
+  }
+
+  tick()
+  const timer = setInterval(tick, 1000)
+  return true
+}
+
+// ── Member (dikontrol dari admin → Pengaturan) ───────────────
+
+function renderMemberSection() {
+  if (settings.member_aktif !== 'true') return
+
+  const benefits = [1, 2, 3, 4]
+    .map(n => settings['member_benefit_' + n])
+    .filter(Boolean)
+
+  if (!benefits.length) return
+
+  benefits.forEach((teks, i) => {
+    const el = document.getElementById('member-benefit-' + (i + 1))
+    if (el) el.textContent = teks
+  })
+  // Sembunyikan kartu manfaat yang tidak diisi admin
+  for (let n = benefits.length + 1; n <= 4; n++) {
+    document.getElementById('member-benefit-' + n)?.closest('div.p-5')?.classList.add('hidden')
+  }
+
+  const syaratTransaksi = settings.member_syarat_transaksi || '5'
+  const syaratProduk    = settings.member_syarat_produk || '5'
+  const diskonPersen    = settings.member_diskon_persen || '10'
+  document.getElementById('member-syarat').textContent =
+    `Diskon ${diskonPersen}% otomatis setelah ${syaratTransaksi}x transaksi atau membeli ${syaratProduk} jenis produk berbeda`
+
+  document.getElementById('member-section').classList.remove('hidden')
 }
 
 // ── Navbar scroll ──────────────────────────────────────────

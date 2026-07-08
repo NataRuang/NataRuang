@@ -305,7 +305,20 @@ INSERT INTO store_settings (key, value, keterangan) VALUES
   ('logo_url',        '',                             'URL logo toko'),
   ('watermark_text',  'NataRuang',              'Teks watermark pada foto produk'),
   ('watermark_opacity','0.35',                        'Opasitas watermark (0–1)'),
-  ('maps_embed',      '',                             'Embed URL Google Maps');
+  ('maps_embed',      '',                             'Embed URL Google Maps'),
+  ('promo_aktif',      'false', 'Tampilkan banner promo/flash sale di halaman utama? (true/false)'),
+  ('promo_judul',      '',      'Judul promo, mis. "Flash Sale Akhir Bulan"'),
+  ('promo_teks',       '',      'Deskripsi singkat promo'),
+  ('promo_link',       '/produk.html', 'Link tombol "Lihat Promo"'),
+  ('promo_berakhir',   '',      'Tanggal & jam promo berakhir, format: 2026-07-31T23:59'),
+  ('member_aktif',     'false', 'Tampilkan bagian Member di halaman utama? (true/false)'),
+  ('member_benefit_1', 'Diskon eksklusif hingga 10% setiap belanja', 'Manfaat member #1'),
+  ('member_benefit_2', 'Respon WhatsApp prioritas & lebih cepat',    'Manfaat member #2'),
+  ('member_benefit_3', 'Akses lebih awal ke promo & koleksi baru',   'Manfaat member #3'),
+  ('member_benefit_4', 'Gratis konsultasi desain interior',          'Manfaat member #4'),
+  ('member_syarat_transaksi', '5',  'Jumlah transaksi berhasil minimal untuk jadi member otomatis'),
+  ('member_syarat_produk',    '5',  'Jumlah jenis produk berbeda minimal untuk jadi member otomatis'),
+  ('member_diskon_persen',    '10', 'Persentase diskon otomatis untuk member (dari subtotal)');
 
 -- ============================================================
 -- 14. AUDIT LOG
@@ -450,8 +463,7 @@ CREATE TRIGGER trg_increment_order_count
 -- ============================================================
 
 -- Produk paling banyak dilihat (7 hari terakhir)
-CREATE OR REPLACE VIEW v_produk_paling_dilihat
-WITH (security_invoker = true) AS
+CREATE OR REPLACE VIEW v_produk_paling_dilihat AS
 SELECT
   p.id,
   p.nama,
@@ -471,8 +483,7 @@ ORDER BY views_7hari DESC, total_views_all DESC
 LIMIT 20;
 
 -- Produk paling sering dipesan (30 hari terakhir)
-CREATE OR REPLACE VIEW v_produk_terlaris
-WITH (security_invoker = true) AS
+CREATE OR REPLACE VIEW v_produk_terlaris AS
 SELECT
   p.id,
   p.nama,
@@ -495,8 +506,7 @@ ORDER BY qty_30hari DESC, total_qty_all DESC
 LIMIT 20;
 
 -- Ringkasan penjualan harian (30 hari terakhir)
-CREATE OR REPLACE VIEW v_ringkasan_penjualan_harian
-WITH (security_invoker = true) AS
+CREATE OR REPLACE VIEW v_ringkasan_penjualan_harian AS
 SELECT
   DATE(o.created_at)        AS tanggal,
   COUNT(*)                  AS jumlah_pesanan,
@@ -509,8 +519,7 @@ GROUP BY DATE(o.created_at)
 ORDER BY tanggal ASC;
 
 -- Ringkasan penjualan bulanan
-CREATE OR REPLACE VIEW v_ringkasan_penjualan_bulanan
-WITH (security_invoker = true) AS
+CREATE OR REPLACE VIEW v_ringkasan_penjualan_bulanan AS
 SELECT
   TO_CHAR(o.created_at, 'YYYY-MM')  AS bulan,
   COUNT(*)                           AS jumlah_pesanan,
@@ -524,8 +533,7 @@ GROUP BY TO_CHAR(o.created_at, 'YYYY-MM')
 ORDER BY bulan DESC;
 
 -- Dashboard summary (dipakai kartu statistik atas dashboard)
-CREATE OR REPLACE VIEW v_dashboard_summary
-WITH (security_invoker = true) AS
+CREATE OR REPLACE VIEW v_dashboard_summary AS
 SELECT
   (SELECT COUNT(*) FROM products WHERE deleted_at IS NULL)          AS total_produk,
   (SELECT COUNT(*) FROM orders   WHERE deleted_at IS NULL)          AS total_pesanan,
@@ -796,6 +804,56 @@ CREATE TRIGGER trg_recalc_product_rating
 
 -- Badge "Produk Baru" di produk.html dihitung langsung di
 -- frontend dari created_at (≤ 14 hari), tidak perlu kolom baru.
+
+-- ============================================================
+-- 15. PROGRAM MEMBER OTOMATIS
+-- ============================================================
+-- Member ditentukan otomatis dari riwayat transaksi nomor WA (tanpa login/akun terpisah).
+-- Syarat & besaran diskon diatur admin lewat store_settings (tab Pengaturan).
+
+CREATE OR REPLACE FUNCTION cek_status_member(p_nomor_wa VARCHAR)
+RETURNS TABLE (
+  total_transaksi    INT,
+  total_produk_unik  INT,
+  is_member          BOOLEAN,
+  diskon_persen      NUMERIC,
+  syarat_transaksi   INT,
+  syarat_produk      INT
+) AS $$
+DECLARE
+  v_syarat_transaksi INT;
+  v_syarat_produk    INT;
+  v_diskon           NUMERIC;
+BEGIN
+  SELECT COALESCE((SELECT value FROM store_settings WHERE key = 'member_syarat_transaksi'), '5')::INT INTO v_syarat_transaksi;
+  SELECT COALESCE((SELECT value FROM store_settings WHERE key = 'member_syarat_produk'),    '5')::INT INTO v_syarat_produk;
+  SELECT COALESCE((SELECT value FROM store_settings WHERE key = 'member_diskon_persen'),    '10')::NUMERIC INTO v_diskon;
+
+  RETURN QUERY
+  WITH order_valid AS (
+    SELECT o.id FROM orders o
+    WHERE o.nomor_wa = p_nomor_wa
+      AND o.status IN ('lunas', 'dikirim', 'selesai')
+      AND o.deleted_at IS NULL
+  ),
+  agg AS (
+    SELECT
+      (SELECT COUNT(*) FROM order_valid)::INT AS jml_transaksi,
+      (SELECT COUNT(DISTINCT oi.product_id) FROM order_items oi
+        WHERE oi.order_id IN (SELECT id FROM order_valid))::INT AS jml_produk
+  )
+  SELECT
+    agg.jml_transaksi,
+    agg.jml_produk,
+    (agg.jml_transaksi >= v_syarat_transaksi OR agg.jml_produk >= v_syarat_produk),
+    v_diskon,
+    v_syarat_transaksi,
+    v_syarat_produk
+  FROM agg;
+END;
+$$ LANGUAGE plpgsql STABLE;
+
+GRANT EXECUTE ON FUNCTION cek_status_member(VARCHAR) TO anon, authenticated;
 
 -- ============================================================
 -- SELESAI — schema.sql

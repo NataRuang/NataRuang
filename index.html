@@ -170,6 +170,29 @@
       <div id="banner-dots" class="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2"></div>
     </section>
 
+    <!-- ═══════════════ PROMO / FLASH SALE (dinamis, admin bisa aktifkan) ═══════════════ -->
+    <section id="promo-section" class="hidden py-10 bg-gradient-to-r from-wood-700 to-wood-900">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col lg:flex-row items-center justify-between gap-6 text-center lg:text-left">
+          <div>
+            <p class="text-wood-200 text-xs font-semibold uppercase tracking-widest mb-1">🔥 Penawaran Terbatas</p>
+            <h2 id="promo-judul" class="font-serif text-2xl sm:text-3xl font-semibold text-white mb-1">-</h2>
+            <p id="promo-teks" class="text-wood-100 text-sm max-w-md">-</p>
+          </div>
+          <div class="flex flex-col items-center gap-3 flex-shrink-0">
+            <div id="promo-countdown" class="flex gap-2"></div>
+            <a id="promo-cta" href="/produk.html"
+              class="bg-white text-wood-700 hover:bg-wood-50 px-6 py-3 rounded-xl text-sm font-semibold transition inline-flex items-center gap-2">
+              Lihat Promo
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ═══════════════ KATEGORI ═══════════════ -->
     <section class="py-16 bg-white/80 dark:bg-charcoal-950/85 backdrop-blur-sm">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -250,6 +273,46 @@
         </div>
         <div id="testimoni-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
           <!-- Diisi JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ MEMBER (dinamis, admin bisa aktifkan) ═══════════════ -->
+    <section id="member-section" class="hidden py-16 bg-white/80 dark:bg-charcoal-950/85 backdrop-blur-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-10">
+          <p class="text-wood-600 text-sm font-semibold uppercase tracking-widest mb-2">NataRuang Member</p>
+          <h2 class="font-serif text-3xl font-semibold mb-2">Belanja Lebih Untung Jadi Member</h2>
+          <p class="text-charcoal-500 dark:text-charcoal-400 max-w-xl mx-auto">Nikmati layanan prioritas dan harga spesial khusus pelanggan setia.</p>
+          <p id="member-syarat" class="inline-block mt-3 text-xs font-medium bg-wood-50 dark:bg-wood-900/30 text-wood-700 dark:text-wood-300 px-4 py-2 rounded-full">-</p>
+        </div>
+        <div id="member-benefits-grid" class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+          <div class="p-5 bg-charcoal-50 dark:bg-charcoal-800 rounded-2xl text-center">
+            <div class="text-3xl mb-3">💸</div>
+            <p id="member-benefit-1" class="text-sm font-medium">-</p>
+          </div>
+          <div class="p-5 bg-charcoal-50 dark:bg-charcoal-800 rounded-2xl text-center">
+            <div class="text-3xl mb-3">⚡</div>
+            <p id="member-benefit-2" class="text-sm font-medium">-</p>
+          </div>
+          <div class="p-5 bg-charcoal-50 dark:bg-charcoal-800 rounded-2xl text-center">
+            <div class="text-3xl mb-3">🎁</div>
+            <p id="member-benefit-3" class="text-sm font-medium">-</p>
+          </div>
+          <div class="p-5 bg-charcoal-50 dark:bg-charcoal-800 rounded-2xl text-center">
+            <div class="text-3xl mb-3">⭐</div>
+            <p id="member-benefit-4" class="text-sm font-medium">-</p>
+          </div>
+        </div>
+        <div class="text-center">
+          <a id="btn-daftar-member" href="/produk.html"
+            class="btn-primary px-8 py-3.5 rounded-xl text-sm font-semibold inline-flex items-center gap-2">
+            Mulai Belanja Sekarang
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </a>
+          <p class="text-xs text-charcoal-400 mt-3">Otomatis aktif — tidak perlu daftar, cukup terus berbelanja di NataRuang.</p>
         </div>
       </div>
     </section>
